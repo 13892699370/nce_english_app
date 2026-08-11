@@ -43,29 +43,17 @@ jobs:
         run: flutter pub get
 
       # ---------------- iOS 未签名 IPA ----------------
-      # 新版 Flutter 的 `flutter build ios --no-codesign` 仍会做「deployable 团队校验」并失败，
-      # 这里改用：config-only 完成 Pod 与项目配置（不触发团队校验），再直接 xcodebuild 构建未签名 .app
-      - name: Configure iOS (pods + project, no team check)
+      # `flutter build ios --no-codesign` 会完整跑通 xcodebuild（含 Podfile 生成、pod install、
+      # Flutter framework 构建），产物 .app 已由 xcodebuild 产出；但新版 Flutter 在最后的
+      # 「deployable 团队校验」处仍会失败退出 — 这里忽略该退出码，直接定位已构建的 .app 打包。
+      - name: Build & package unsigned iOS app
         run: |
-          flutter build ios --config-only --no-codesign
-          cd ios && pod install && cd ..
-
-      - name: Build unsigned iOS app (xcodebuild)
-        run: |
-          xcodebuild \
-            -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -sdk iphoneos \
-            -derivedDataPath build/derived \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            DEVELOPMENT_TEAM=""
-
-      - name: Package unsigned IPA
-        run: |
-          APP_PATH=$(find build/derived/Build/Products -name "Runner.app" -type d | head -1)
+          set +e
+          flutter build ios --release --no-codesign
+          set -e
+          # 在 Flutter 标准输出目录或 DerivedData 中定位产物
+          APP_PATH=$(find build/ios ~/Library/Developer/Xcode/DerivedData \
+            -name "Runner.app" -type d 2>/dev/null | head -1)
           echo "Built app: $APP_PATH"
           test -n "$APP_PATH"
           rm -rf build/Payload

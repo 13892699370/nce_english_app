@@ -24,10 +24,10 @@ class HomePage extends StatelessWidget {
             label: '单词',
           ),
           BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.rosette),
-            activeIcon: Icon(CupertinoIcons.rosette_fill),
-            label: '成就',
-          ),
+                icon: Icon(CupertinoIcons.star),
+                activeIcon: Icon(CupertinoIcons.star_fill),
+                label: '成就',
+              ),
         ],
       ),
       tabBuilder: (context, index) {

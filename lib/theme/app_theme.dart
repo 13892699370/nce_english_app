@@ -1,67 +1,82 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-/// Apple 原生风格主题：iOS 系统配色 + SF Pro 字体风格 + Cupertino 组件
+/// Lumina Mono 视觉系统：黑白灰极简 + 荧光绿强调 + 超圆角软卡片
 class AppTheme {
   AppTheme._();
 
-  // iOS 系统配色（浅色）
-  static const Color kSystemBlue = Color(0xFF007AFF);
-  static const Color kSystemGreen = Color(0xFF34C759);
-  static const Color kSystemIndigo = Color(0xFF5856D6);
-  static const Color kSystemOrange = Color(0xFFFF9500);
-  static const Color kSystemPink = Color(0xFFFF2D55);
-  static const Color kSystemPurple = Color(0xFFAF52DE);
-  static const Color kSystemRed = Color(0xFFFF3B30);
-  static const Color kSystemTeal = Color(0xFF5AC8FA);
-  static const Color kSystemYellow = Color(0xFFFFCC00);
+  // 参考稿核心色
+  static const Color kLuminaBlack = Color(0xFF1B1B1B);
+  static const Color kLuminaBg = Color(0xFFF9F9FB);
+  static const Color kLuminaSurface = Color(0xFFFFFFFF);
+  static const Color kLuminaSurfaceLow = Color(0xFFF3F3F5);
+  static const Color kLuminaSurfaceHigh = Color(0xFFE8E8EA);
+  static const Color kLuminaText = Color(0xFF1A1C1D);
+  static const Color kLuminaMuted = Color(0xFF4C4546);
+  static const Color kLuminaOutline = Color(0xFFCFC4C5);
+  static const Color kLuminaLime = Color(0xFFC6F341);
+  static const Color kLuminaLimeDim = Color(0xFFAAD622);
 
-  // iOS 系统配色（深色）
-  static const Color kSystemBlueDark = Color(0xFF0A84FF);
-  static const Color kSystemGreenDark = Color(0xFF30D158);
-  static const Color kSystemOrangeDark = Color(0xFFFF9F0A);
-  static const Color kSystemRedDark = Color(0xFFFF453A);
-  static const Color kSystemPurpleDark = Color(0xFFBF5AF2);
-  static const Color kSystemYellowDark = Color(0xFFFFD60A);
+  // 深色模式
+  static const Color kLuminaBgDark = Color(0xFF111111);
+  static const Color kLuminaSurfaceDark = Color(0xFF1B1B1B);
+  static const Color kLuminaSurfaceLowDark = Color(0xFF242424);
+  static const Color kLuminaTextDark = Color(0xFFF0F0F2);
+  static const Color kLuminaMutedDark = Color(0xFFB8B8BA);
 
   // 兼容旧代码的别名
-  static const Color kPrimary = kSystemBlue;
-  static const Color kPrimaryDark = kSystemBlueDark;
-  static const Color kAccent = kSystemTeal;
+  static const Color kSystemBlue = kLuminaBlack;
+  static const Color kSystemGreen = Color(0xFF4F6600);
+  static const Color kSystemIndigo = kLuminaBlack;
+  static const Color kSystemOrange = Color(0xFFFF9500);
+  static const Color kSystemPink = Color(0xFFFF2D55);
+  static const Color kSystemPurple = Color(0xFF527AFF);
+  static const Color kSystemRed = Color(0xFFBA1A1A);
+  static const Color kSystemTeal = Color(0xFF527AFF);
+  static const Color kSystemYellow = kLuminaLime;
+  static const Color kSystemBlueDark = kLuminaLime;
+  static const Color kSystemGreenDark = kLuminaLime;
+  static const Color kSystemOrangeDark = Color(0xFFFF9F0A);
+  static const Color kSystemRedDark = Color(0xFFFF453A);
+  static const Color kSystemPurpleDark = Color(0xFFB6C4FF);
+  static const Color kSystemYellowDark = kLuminaLime;
+  static const Color kPrimary = kLuminaBlack;
+  static const Color kPrimaryDark = kLuminaLime;
+  static const Color kAccent = kLuminaLime;
   static const Color kDanger = kSystemRed;
   static const Color kWarn = kSystemOrange;
   static const Color kPurple = kSystemPurple;
 
-  // iOS 背景色
-  static const Color kGroupedBgLight = Color(0xFFF2F2F7);
-  static const Color kGroupedBgDark = Color(0xFF000000);
-  static const Color kCardBgLight = Color(0xFFFFFFFF);
-  static const Color kCardBgDark = Color(0xFF1C1C1E);
+  static const Color kGroupedBgLight = kLuminaBg;
+  static const Color kGroupedBgDark = kLuminaBgDark;
+  static const Color kCardBgLight = kLuminaSurface;
+  static const Color kCardBgDark = kLuminaSurfaceDark;
 
   static ThemeData light() {
     final scheme = ColorScheme.fromSeed(
-      seedColor: kSystemBlue,
+      seedColor: kLuminaBlack,
       brightness: Brightness.light,
     ).copyWith(
-      primary: kSystemBlue,
-      secondary: kSystemTeal,
+      primary: kLuminaBlack,
+      secondary: kLuminaLime,
       error: kSystemRed,
-      surface: kCardBgLight,
-      onSurface: const Color(0xFF000000),
+      surface: kLuminaSurface,
+      onSurface: kLuminaText,
+      outline: kLuminaOutline,
     );
     return _base(scheme, Brightness.light);
   }
 
   static ThemeData dark() {
     final scheme = ColorScheme.fromSeed(
-      seedColor: kSystemBlueDark,
+      seedColor: kLuminaLime,
       brightness: Brightness.dark,
     ).copyWith(
-      primary: kSystemBlueDark,
-      secondary: kSystemTeal,
+      primary: kLuminaLime,
+      secondary: kLuminaLime,
       error: kSystemRedDark,
-      surface: kCardBgDark,
-      onSurface: const Color(0xFFFFFFFF),
+      surface: kLuminaSurfaceDark,
+      onSurface: kLuminaTextDark,
     );
     return _base(scheme, Brightness.dark);
   }
@@ -71,32 +86,36 @@ class AppTheme {
     final isDark = brightness == Brightness.dark;
     return CupertinoThemeData(
       brightness: brightness,
-      primaryColor: isDark ? kSystemBlueDark : kSystemBlue,
+      primaryColor: isDark ? kLuminaLime : kLuminaBlack,
       scaffoldBackgroundColor: isDark ? kGroupedBgDark : kGroupedBgLight,
       barBackgroundColor: isDark
-          ? const Color(0xE6161616)
-          : const Color(0xF0F9F9F9),
+          ? const Color(0xE61B1B1B)
+          : const Color(0xF0F9F9FB),
       textTheme: CupertinoTextThemeData(
-        primaryColor: isDark ? kSystemBlueDark : kSystemBlue,
+        primaryColor: isDark ? kLuminaLime : kLuminaBlack,
         textStyle: TextStyle(
-          fontSize: 17,
+          fontSize: 16,
           fontWeight: FontWeight.w400,
-          color: isDark ? Colors.white : Colors.black,
+          color: isDark ? kLuminaTextDark : kLuminaText,
+          decoration: TextDecoration.none,
         ),
         navLargeTitleTextStyle: TextStyle(
-          fontSize: 34,
+          fontSize: 32,
           fontWeight: FontWeight.w700,
-          color: isDark ? Colors.white : Colors.black,
+          color: isDark ? kLuminaTextDark : kLuminaText,
+          decoration: TextDecoration.none,
         ),
         navTitleTextStyle: TextStyle(
-          fontSize: 17,
+          fontSize: 18,
           fontWeight: FontWeight.w600,
-          color: isDark ? Colors.white : Colors.black,
+          color: isDark ? kLuminaTextDark : kLuminaText,
+          decoration: TextDecoration.none,
         ),
         actionTextStyle: TextStyle(
-          fontSize: 17,
+          fontSize: 16,
           fontWeight: FontWeight.w400,
-          color: isDark ? kSystemBlueDark : kSystemBlue,
+          color: isDark ? kLuminaLime : kLuminaBlack,
+          decoration: TextDecoration.none,
         ),
       ),
     );
@@ -127,22 +146,22 @@ class AppTheme {
         ),
       ),
       textTheme: const TextTheme().copyWith(
-        displayLarge: TextStyle(fontSize: 34, fontWeight: FontWeight.w700),
-        displayMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
-        titleLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-        titleMedium: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-        titleSmall: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-        bodyLarge: TextStyle(fontSize: 17, fontWeight: FontWeight.w400),
-        bodyMedium: TextStyle(fontSize: 15, fontWeight: FontWeight.w400),
+        displayLarge: TextStyle(fontSize: 40, fontWeight: FontWeight.w700, letterSpacing: -0.8),
+        displayMedium: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, letterSpacing: -0.6),
+        titleLarge: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
+        titleMedium: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
+        titleSmall: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        bodyLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w400, height: 1.6),
+        bodyMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, height: 1.5),
         bodySmall: TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
-        labelLarge: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-        labelMedium: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-        labelSmall: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        labelLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        labelMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.6),
+        labelSmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
       ),
       cardTheme: CardThemeData(
         elevation: 0,
         color: isDark ? kCardBgDark : kCardBgLight,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
       dividerTheme: DividerThemeData(
         color: isDark
@@ -153,21 +172,19 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: isDark
-            ? const Color(0xFF2C2C2E)
-            : const Color(0xFFE5E5EA),
+            ? kLuminaSurfaceLowDark
+            : kLuminaSurfaceLow,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: isDark
-            ? const Color(0xFF2C2C2E)
-            : const Color(0xFF3C3C43),
+        backgroundColor: isDark ? kLuminaSurfaceLowDark : kLuminaBlack,
         contentTextStyle: const TextStyle(color: Colors.white, fontSize: 15),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
     );
   }

@@ -78,14 +78,37 @@ class _CalendarPageState extends State<CalendarPage> {
 
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
-        middle: Text('学习日历'),
+        middle: Text('Lumina Mono'),
         trailing: ThemeToggleButton(),
       ),
       child: Material(
         color: Colors.transparent,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 132),
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 6, 4, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '学习日历',
+                    style: theme.textTheme.displayMedium?.copyWith(
+                      color: theme.colorScheme.onSurface,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '回看历史打卡，只读查看当天任务和仿写记录。',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.58),
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: TextbookDropdown(

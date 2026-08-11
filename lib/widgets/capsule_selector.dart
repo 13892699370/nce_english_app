@@ -33,10 +33,11 @@ class _CapsuleSelectorState<T> extends State<CapsuleSelector<T>> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accentColor =
-        isDark ? AppTheme.kSystemBlueDark : AppTheme.kSystemBlue;
+        isDark ? AppTheme.kLuminaLime : AppTheme.kLuminaBlack;
     final thumbColor =
-        isDark ? AppTheme.kCardBgDark : AppTheme.kCardBgLight;
-    const unselectedTextColor = Color(0xFF8E8E93);
+        isDark ? AppTheme.kLuminaSurfaceDark : AppTheme.kLuminaSurface;
+    final unselectedTextColor =
+        isDark ? AppTheme.kLuminaMutedDark : AppTheme.kLuminaMuted;
 
     final Map<T, Widget> segments = {};
     for (final opt in widget.options) {

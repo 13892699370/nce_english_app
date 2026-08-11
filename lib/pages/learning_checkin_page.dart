@@ -245,13 +245,39 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
 
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
-        middle: Text('打卡'),
+        middle: Text('Lumina Mono'),
         trailing: ThemeToggleButton(),
       ),
       child: Material(
         color: Colors.transparent,
         child: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '今日学习',
+                    style: theme.textTheme.displayMedium?.copyWith(
+                      color: theme.colorScheme.onSurface,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '完成今天的听说读写任务，保持学习节奏。',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.58),
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Column(
@@ -346,7 +372,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 132),
       children: [
         LiquidGlassCard(
           child: Column(

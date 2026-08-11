@@ -31,7 +31,7 @@ class _TextbookDropdownState extends State<TextbookDropdown> {
   void _showActionSheet() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accentColor =
-        isDark ? AppTheme.kSystemBlueDark : AppTheme.kSystemBlue;
+        isDark ? AppTheme.kLuminaLime : AppTheme.kLuminaBlack;
 
     showCupertinoModalPopup<void>(
       context: context,
@@ -80,7 +80,7 @@ class _TextbookDropdownState extends State<TextbookDropdown> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accentColor =
-        isDark ? AppTheme.kSystemBlueDark : AppTheme.kSystemBlue;
+        isDark ? AppTheme.kLuminaLime : AppTheme.kLuminaBlack;
     final currentLabel = widget.options
         .firstWhere((o) => o.value == widget.value,
             orElse: () => widget.options.first)
@@ -97,10 +97,23 @@ class _TextbookDropdownState extends State<TextbookDropdown> {
         duration: const Duration(milliseconds: 100),
         opacity: _pressed ? 0.5 : 1.0,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
           decoration: BoxDecoration(
-            color: isDark ? AppTheme.kCardBgDark : AppTheme.kCardBgLight,
-            borderRadius: BorderRadius.circular(12),
+            color: isDark ? AppTheme.kLuminaSurfaceDark : AppTheme.kLuminaSurface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withOpacity(0.06)
+                  : AppTheme.kLuminaSurfaceHigh.withOpacity(0.55),
+              width: 0.7,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.22 : 0.04),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -114,9 +127,10 @@ class _TextbookDropdownState extends State<TextbookDropdown> {
                 child: Text(
                   currentLabel,
                   style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : Colors.black,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? AppTheme.kLuminaTextDark : AppTheme.kLuminaText,
+                    decoration: TextDecoration.none,
                   ),
                 ),
               ),

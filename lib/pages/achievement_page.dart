@@ -31,14 +31,37 @@ class _AchievementPageState extends State<AchievementPage> {
 
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
-        middle: Text('成就'),
+        middle: Text('Lumina Mono'),
         trailing: ThemeToggleButton(),
       ),
       child: Material(
         color: Colors.transparent,
         child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 132),
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 6, 4, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '打卡挑战',
+                  style: theme.textTheme.displayMedium?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '查看连续学习、累计打卡和已解锁徽章。',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.58),
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ],
+            ),
+          ),
           LiquidGlassCard(
             child: Column(
               children: [

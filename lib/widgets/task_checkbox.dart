@@ -27,8 +27,7 @@ class _TaskCheckboxState extends State<TaskCheckbox> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accentColor =
-        isDark ? AppTheme.kSystemBlueDark : AppTheme.kSystemBlue;
+    const accentColor = AppTheme.kLuminaLime;
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
@@ -57,14 +56,16 @@ class _TaskCheckboxState extends State<TaskCheckbox> {
                   border: Border.all(
                     color: widget.value
                         ? accentColor
-                        : const Color(0xFF8E8E93),
+                        : (isDark
+                            ? AppTheme.kLuminaMutedDark.withOpacity(0.45)
+                            : AppTheme.kLuminaMuted.withOpacity(0.45)),
                     width: 2,
                   ),
                 ),
                 child: widget.value
                     ? const Icon(
                         CupertinoIcons.check_mark,
-                        color: Colors.white,
+                        color: AppTheme.kLuminaBlack,
                         size: 16,
                       )
                     : null,
@@ -75,12 +76,13 @@ class _TaskCheckboxState extends State<TaskCheckbox> {
                   widget.label,
                   style: TextStyle(
                     fontSize: 15,
-                    fontWeight: FontWeight.w400,
+                    fontWeight: FontWeight.w500,
                     color: widget.value
                         ? (isDark
-                            ? Colors.white.withOpacity(0.6)
-                            : Colors.black.withOpacity(0.6))
-                        : (isDark ? Colors.white : Colors.black),
+                            ? AppTheme.kLuminaTextDark.withOpacity(0.62)
+                            : AppTheme.kLuminaText.withOpacity(0.62))
+                        : (isDark ? AppTheme.kLuminaTextDark : AppTheme.kLuminaText),
+                    decoration: TextDecoration.none,
                   ),
                 ),
               ),

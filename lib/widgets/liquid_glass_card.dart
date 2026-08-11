@@ -1,8 +1,9 @@
 import 'dart:io' show Platform;
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
-/// iOS Liquid Glass 风格磨砂卡片
+/// Lumina Mono 风格软卡片 + 轻量 Liquid Glass
 ///
 /// 增强版：渐变高光 + 弹性按压 + 低端设备自动降级。
 /// 半透明背景 + BackdropFilter 模糊 + 顶部高光渐变 + 柔和阴影。
@@ -24,8 +25,8 @@ class LiquidGlassCard extends StatefulWidget {
     required this.child,
     this.padding,
     this.margin,
-    this.blurRadius = 15,
-    this.borderRadius = 12,
+    this.blurRadius = 12,
+    this.borderRadius = 24,
     this.glassColor,
     this.boxShadow,
     this.onTap,
@@ -79,8 +80,8 @@ class _LiquidGlassCardState extends State<LiquidGlassCard>
     final isDark = theme.brightness == Brightness.dark;
     final base = widget.glassColor ??
         (isDark
-            ? const Color(0xCC1C1C1E)
-            : const Color(0xCCFFFFFF));
+            ? AppTheme.kLuminaSurfaceDark.withOpacity(0.90)
+            : AppTheme.kLuminaSurface.withOpacity(0.92));
 
     final pressScale = _isLowEndDevice ? 1.0 : 0.97;
 
@@ -112,17 +113,17 @@ class _LiquidGlassCardState extends State<LiquidGlassCard>
                 borderRadius: BorderRadius.circular(widget.borderRadius),
                 border: Border.all(
                   color: isDark
-                      ? Colors.white.withOpacity(0.10)
-                      : Colors.white.withOpacity(0.60),
-                  width: 0.5,
+                      ? Colors.white.withOpacity(0.08)
+                      : AppTheme.kLuminaSurfaceHigh.withOpacity(0.50),
+                  width: 0.7,
                 ),
                 boxShadow: widget.boxShadow ??
                     [
                       BoxShadow(
                         color: Colors.black
-                            .withOpacity(isDark ? 0.3 : 0.04),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
+                            .withOpacity(isDark ? 0.28 : 0.04),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
                       ),
                     ],
               ),
@@ -140,7 +141,7 @@ class _LiquidGlassCardState extends State<LiquidGlassCard>
                               end: Alignment.bottomRight,
                               colors: [
                                 Colors.white
-                                    .withOpacity(isDark ? 0.06 : 0.18),
+                                    .withOpacity(isDark ? 0.05 : 0.28),
                                 Colors.white.withOpacity(0.0),
                               ],
                               stops: const [0.0, 0.5],

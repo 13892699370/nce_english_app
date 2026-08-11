@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/haptic_service.dart';
 import '../theme/app_theme.dart';
 
-/// iOS 风格按钮（弹性按压微交互 + 低端设备降级）
+/// Lumina Mono 风格按钮（黑色主按钮 + 荧光绿强调 + 弹性微交互）
 ///
 /// 4 种变体：primary（蓝色填充）、secondary（蓝色文字）、success（绿色）、danger（红色）
 enum DuolingoButtonVariant {
@@ -29,7 +29,7 @@ class DuolingoButton extends StatefulWidget {
     this.onPressed,
     this.variant = DuolingoButtonVariant.primary,
     this.icon,
-    this.borderRadius = 12,
+    this.borderRadius = 16,
     this.minHeight = 50,
     this.fullwidth = true,
     this.enableHaptic = true,
@@ -86,13 +86,13 @@ class _DuolingoButtonState extends State<DuolingoButton>
     switch (widget.variant) {
       case DuolingoButtonVariant.primary:
         return (
-          isDark ? AppTheme.kSystemBlueDark : AppTheme.kSystemBlue,
-          Colors.white,
+          isDark ? AppTheme.kLuminaLime : AppTheme.kLuminaBlack,
+          isDark ? AppTheme.kLuminaBlack : Colors.white,
         );
       case DuolingoButtonVariant.success:
         return (
-          isDark ? AppTheme.kSystemGreenDark : AppTheme.kSystemGreen,
-          Colors.white,
+          AppTheme.kLuminaLime,
+          AppTheme.kLuminaBlack,
         );
       case DuolingoButtonVariant.danger:
         return (
@@ -100,7 +100,10 @@ class _DuolingoButtonState extends State<DuolingoButton>
           Colors.white,
         );
       case DuolingoButtonVariant.secondary:
-        return (Colors.transparent, isDark ? AppTheme.kSystemBlueDark : AppTheme.kSystemBlue);
+        return (
+          Colors.transparent,
+          isDark ? AppTheme.kLuminaLime : AppTheme.kLuminaBlack
+        );
     }
   }
 
@@ -110,7 +113,11 @@ class _DuolingoButtonState extends State<DuolingoButton>
     final disabled = widget.onPressed == null;
     final (bg, fg) = _colors();
 
-    final displayBg = disabled ? Colors.grey.shade300 : bg;
+    final displayBg = disabled
+        ? (Theme.of(context).brightness == Brightness.dark
+            ? AppTheme.kLuminaSurfaceLowDark
+            : AppTheme.kLuminaSurfaceHigh)
+        : bg;
     final displayFg = disabled
         ? (isSecondary ? Colors.grey : Colors.white)
         : fg;
@@ -140,8 +147,17 @@ class _DuolingoButtonState extends State<DuolingoButton>
             color: isSecondary ? Colors.transparent : displayBg,
             borderRadius: BorderRadius.circular(widget.borderRadius),
             border: isSecondary
-                ? Border.all(color: displayFg.withOpacity(0.2), width: 1)
+                ? Border.all(color: displayFg.withOpacity(0.14), width: 1)
                 : null,
+            boxShadow: isSecondary || disabled
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 22,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
           ),
           child: Row(
             mainAxisSize: widget.fullwidth ? MainAxisSize.max : MainAxisSize.min,

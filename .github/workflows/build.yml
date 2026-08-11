@@ -43,14 +43,34 @@ jobs:
         run: flutter pub get
 
       # ---------------- iOS 未签名 IPA ----------------
-      - name: Build unsigned iOS app
-        run: flutter build ios --release --no-codesign
+      # 新版 Flutter 的 `flutter build ios --no-codesign` 仍会做「deployable 团队校验」并失败，
+      # 这里改用：config-only 完成 Pod 与项目配置（不触发团队校验），再直接 xcodebuild 构建未签名 .app
+      - name: Configure iOS (pods + project, no team check)
+        run: |
+          flutter build ios --config-only --no-codesign
+          cd ios && pod install && cd ..
+
+      - name: Build unsigned iOS app (xcodebuild)
+        run: |
+          xcodebuild \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build/derived \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM=""
 
       - name: Package unsigned IPA
         run: |
+          APP_PATH=$(find build/derived/Build/Products -name "Runner.app" -type d | head -1)
+          echo "Built app: $APP_PATH"
+          test -n "$APP_PATH"
           rm -rf build/Payload
           mkdir -p build/Payload
-          cp -R build/ios/iphoneos/Runner.app build/Payload/
+          cp -R "$APP_PATH" build/Payload/
           cd build
           zip -qr Runner_unsigned.ipa Payload
           ls -lh Runner_unsigned.ipa

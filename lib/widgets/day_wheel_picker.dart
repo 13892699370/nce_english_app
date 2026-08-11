@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'liquid_glass_card.dart';
 
 /// 缩小版 Cupertino 圆形滚轮选天器。
-class DayWheelPicker extends StatelessWidget {
+class DayWheelPicker extends StatefulWidget {
   final int currentDay;
   final int totalDays;
   final ValueChanged<int> onChanged;
@@ -15,6 +15,47 @@ class DayWheelPicker extends StatelessWidget {
     required this.totalDays,
     required this.onChanged,
   });
+
+  @override
+  State<DayWheelPicker> createState() => _DayWheelPickerState();
+}
+
+class _DayWheelPickerState extends State<DayWheelPicker> {
+  late FixedExtentScrollController _controller;
+
+  int get _safeIndex {
+    if (widget.totalDays <= 0) return 0;
+    return (widget.currentDay - 1).clamp(0, widget.totalDays - 1);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = FixedExtentScrollController(initialItem: _safeIndex);
+  }
+
+  @override
+  void didUpdateWidget(covariant DayWheelPicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final shouldReposition =
+        oldWidget.currentDay != widget.currentDay ||
+            oldWidget.totalDays != widget.totalDays;
+    if (!shouldReposition) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_controller.hasClients) return;
+      _controller.animateToItem(
+        _safeIndex,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +73,7 @@ class DayWheelPicker extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           Text(
-            '第$currentDay天',
+            '第${widget.currentDay}天',
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w800,
@@ -44,9 +85,7 @@ class DayWheelPicker extends StatelessWidget {
             width: 86,
             height: 54,
             child: CupertinoPicker(
-              scrollController: FixedExtentScrollController(
-                initialItem: (currentDay - 1).clamp(0, totalDays - 1),
-              ),
+              scrollController: _controller,
               itemExtent: 28,
               magnification: 1.08,
               squeeze: 1.12,
@@ -54,9 +93,9 @@ class DayWheelPicker extends StatelessWidget {
               selectionOverlay: CupertinoPickerDefaultSelectionOverlay(
                 background: theme.colorScheme.primary.withOpacity(0.08),
               ),
-              onSelectedItemChanged: (i) => onChanged(i + 1),
+              onSelectedItemChanged: (i) => widget.onChanged(i + 1),
               children: List.generate(
-                totalDays,
+                widget.totalDays,
                 (i) => Center(
                   child: Text(
                     '${i + 1}',

@@ -202,6 +202,10 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
         _currentDay += 1;
         _loading = true;
       });
+      await StorageService.instance.setCurrentDay(
+        TextbookService.instance.currentId,
+        _currentDay,
+      );
       _loadCheckin();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

@@ -46,19 +46,46 @@ jobs:
       # `flutter build ios --no-codesign` 会完整跑通 xcodebuild（含 Podfile 生成、pod install、
       # Flutter framework 构建），产物 .app 已由 xcodebuild 产出；但新版 Flutter 在最后的
       # 「deployable 团队校验」处仍会失败退出 — 这里忽略该退出码，直接定位已构建的 .app 打包。
+      #
+      # 关键：find 可能匹配到多个 Runner.app（含空壳/中间产物），必须挑选「含 Flutter.framework」
+      # 的完整 app（几十 MB），否则会打包出 332B 的空 IPA。
       - name: Build & package unsigned iOS app
         run: |
           set +e
           flutter build ios --release --no-codesign
           set -e
-          # 在 Flutter 标准输出目录或 DerivedData 中定位产物
-          APP_PATH=$(find build/ios ~/Library/Developer/Xcode/DerivedData \
-            -name "Runner.app" -type d 2>/dev/null | head -1)
-          echo "Built app: $APP_PATH"
+
+          # 收集所有 Runner.app 路径
+          find build/ios ~/Library/Developer/Xcode/DerivedData \
+            -name "Runner.app" -type d 2>/dev/null > /tmp/runner_apps.txt
+
+          echo "=== All Runner.app found ==="
+          while IFS= read -r p; do
+            size=$(du -sh "$p" 2>/dev/null | cut -f1)
+            has_flutter="no"
+            [ -d "$p/Frameworks/Flutter.framework" ] && has_flutter="YES"
+            echo "  $size | Flutter.framework=$has_flutter | $p"
+          done < /tmp/runner_apps.txt
+
+          # 优先选含 Flutter.framework 的完整 app（可运行的真包）
+          APP_PATH=""
+          while IFS= read -r p; do
+            [ -d "$p/Frameworks/Flutter.framework" ] && { APP_PATH="$p"; break; }
+          done < /tmp/runner_apps.txt
+
+          # 回退：选体积最大的 Runner.app
+          if [ -z "$APP_PATH" ]; then
+            APP_PATH=$(while IFS= read -r p; do du -sh "$p" 2>/dev/null; done < /tmp/runner_apps.txt \
+              | sort -rh | head -1 | cut -f2-)
+          fi
+
+          echo "Selected app: $APP_PATH"
           test -n "$APP_PATH"
+          echo "Selected app size: $(du -sh "$APP_PATH" | cut -f1)"
           rm -rf build/Payload
           mkdir -p build/Payload
-          cp -R "$APP_PATH" build/Payload/
+          # -L 跟随符号链接，确保拷贝真实内容
+          cp -RL "$APP_PATH" build/Payload/
           cd build
           zip -qr Runner_unsigned.ipa Payload
           ls -lh Runner_unsigned.ipa

@@ -61,7 +61,7 @@ class AppTheme {
         bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         color: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),

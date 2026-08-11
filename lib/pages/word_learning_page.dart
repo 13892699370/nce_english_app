@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../data/textbook_registry.dart';
 import '../data/lesson.dart';
@@ -7,16 +8,15 @@ import '../services/textbook_service.dart';
 import '../services/haptic_service.dart';
 import '../services/audio_feedback_service.dart';
 import '../services/word_tts_service.dart';
+import '../theme/app_theme.dart';
 import '../utils/date_util.dart';
 import '../widgets/liquid_glass_card.dart';
 import '../widgets/duolingo_button.dart';
 import '../widgets/textbook_dropdown.dart';
 import '../widgets/day_wheel_picker.dart';
+import '../widgets/theme_toggle_button.dart';
 
-/// 单词学习页（仿百词斩）
-///
-/// 根据当前选中教材自动加载对应词库；支持按天筛选单词。
-/// 液态玻璃单词大卡片，展示英文、音标、中文释义。
+/// 单词学习页（iOS 原生风格）
 class WordLearningPage extends StatefulWidget {
   const WordLearningPage({super.key});
 
@@ -48,7 +48,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
   void _initDayAndLoad() {
     final tbId = TextbookService.instance.currentId;
     _currentDay = StorageService.instance.currentDayOf(tbId);
-    _showDayFilter = true; // 默认开启按天筛选，跟随打卡页当前天数
+    _showDayFilter = true;
     _reloadVocab();
   }
 
@@ -68,14 +68,12 @@ class _WordLearningPageState extends State<WordLearningPage> {
     final tbId = TextbookService.instance.currentId;
     final allVocab = TextbookRegistry.vocabWithDayNumber(tbId);
 
-    // 按天筛选或显示全部
     if (_showDayFilter) {
       _vocab = allVocab.where((v) => v.dayNumber == _currentDay).toList();
     } else {
       _vocab = List.from(allVocab);
     }
 
-    // 排序：待复习优先，其次未学习，最后按课程号
     _vocab.sort((a, b) {
       final pa = StorageService.instance.getWord(tbId, a.word);
       final pb = StorageService.instance.getWord(tbId, b.word);
@@ -147,7 +145,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
     await TextbookService.instance.select(id);
     setState(() {
       _currentDay = StorageService.instance.currentDayOf(id);
-      _showDayFilter = true; // 切换教材默认开启按天筛选
+      _showDayFilter = true;
       _loading = true;
     });
     _reloadVocab();
@@ -198,121 +196,119 @@ class _WordLearningPageState extends State<WordLearningPage> {
         .map((t) => TextbookDropdownOption(value: t.id, label: t.name))
         .toList();
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            // 顶部
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Text('📖 单词学习',
+    return CupertinoPageScaffold(
+      navigationBar: const CupertinoNavigationBar(
+        middle: Text('单词'),
+        trailing: ThemeToggleButton(),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => _showNotebook(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.kSystemOrange.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(CupertinoIcons.book,
+                            size: 14, color: AppTheme.kSystemOrange),
+                        const SizedBox(width: 4),
+                        Text(
+                          '生词本 $_notebookCount',
                           style: TextStyle(
-                              fontSize: 24, fontWeight: FontWeight.w800)),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () => _showNotebook(context),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFC800).withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.menu_book,
-                                  size: 14, color: Color(0xFFE0A800)),
-                              const SizedBox(width: 4),
-                              Text(
-                                '生词本 $_notebookCount',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFFE0A800),
-                                ),
-                              ),
-                            ],
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.kSystemOrange,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Tooltip(
-                        message: AudioFeedbackService.instance.enabled
-                            ? '关闭反馈音效'
-                            : '开启反馈音效',
-                        child: Switch(
-                          value: AudioFeedbackService.instance.enabled,
-                          activeColor: const Color(0xFF58CC02),
-                          onChanged: _toggleSoundEffects,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 10),
-                  TextbookDropdown(
-                    options: textbooks,
-                    value: TextbookService.instance.currentId,
-                    onChanged: _onTextbookChanged,
+                ),
+                const Spacer(),
+                Icon(
+                  CupertinoIcons.speaker_2_fill,
+                  size: 16,
+                  color: theme.colorScheme.onSurface.withOpacity(0.4),
+                ),
+                const SizedBox(width: 4),
+                Transform.scale(
+                  scale: 0.8,
+                  child: CupertinoSwitch(
+                    value: AudioFeedbackService.instance.enabled,
+                    onChanged: _toggleSoundEffects,
                   ),
-                  const SizedBox(height: 10),
-                  // 统计卡
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _statChip(
-                          theme: theme,
-                          color: const Color(0xFF58CC02),
-                          label: '今日学习',
-                          value: '$_todayLearned',
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _statChip(
-                          theme: theme,
-                          color: const Color(0xFFFFC800),
-                          label: '待复习',
-                          value: '$_toReview',
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _statChip(
-                          theme: theme,
-                          color: const Color(0xFF1CB0F6),
-                          label: '词库',
-                          value: '${_vocab.length}',
-                        ),
-                      ),
-                    ],
-                  ),
-                  // 按天筛选
-                  const SizedBox(height: 8),
-                  _buildDayFilter(theme),
-                ],
-              ),
+                ),
+              ],
             ),
-
-            const SizedBox(height: 4),
-
-            // 单词卡 + 按钮
-            Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _vocab.isEmpty
-                      ? _buildEmpty(theme)
-                      : _index >= _vocab.length
-                          ? _buildComplete(theme)
-                          : _buildWordCard(theme),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextbookDropdown(
+              options: textbooks,
+              value: TextbookService.instance.currentId,
+              onChanged: _onTextbookChanged,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _statChip(
+                    theme: theme,
+                    color: AppTheme.kSystemBlue,
+                    label: '今日学习',
+                    value: '$_todayLearned',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _statChip(
+                    theme: theme,
+                    color: AppTheme.kSystemOrange,
+                    label: '待复习',
+                    value: '$_toReview',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _statChip(
+                    theme: theme,
+                    color: AppTheme.kSystemPurple,
+                    label: '词库',
+                    value: '${_vocab.length}',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _buildDayFilter(theme),
+          ),
+          const SizedBox(height: 4),
+          Expanded(
+            child: _loading
+                ? const Center(child: CupertinoActivityIndicator())
+                : _vocab.isEmpty
+                    ? _buildEmpty(theme)
+                    : _index >= _vocab.length
+                        ? _buildComplete(theme)
+                        : _buildWordCard(theme),
+          ),
+        ],
       ),
     );
   }
@@ -332,34 +328,31 @@ class _WordLearningPageState extends State<WordLearningPage> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: _showDayFilter
-                    ? theme.colorScheme.primary.withOpacity(0.12)
-                    : theme.colorScheme.surface.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: _showDayFilter
-                      ? theme.colorScheme.primary.withOpacity(0.3)
-                      : theme.colorScheme.outline.withOpacity(0.15),
-                ),
+                    ? theme.colorScheme.primary.withOpacity(0.10)
+                    : theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    _showDayFilter ? Icons.filter_alt : Icons.filter_alt_outlined,
-                    size: 16,
+                    CupertinoIcons.line_horizontal_3_decrease,
+                    size: 14,
                     color: _showDayFilter
                         ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurface.withOpacity(0.6),
+                        : theme.colorScheme.onSurface.withOpacity(0.5),
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    _showDayFilter ? '第$_currentDay天 · L${_currentDay * 2 - 1}-L${_currentDay * 2}' : '全部单词',
+                    _showDayFilter
+                        ? '第$_currentDay天 · L${_currentDay * 2 - 1}-L${_currentDay * 2}'
+                        : '全部单词',
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
                       color: _showDayFilter
                           ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurface.withOpacity(0.7),
+                          : theme.colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                 ],
@@ -400,15 +393,15 @@ class _WordLearningPageState extends State<WordLearningPage> {
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
         color: color.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
         children: [
           Text(
             value,
             style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
               color: color,
             ),
           ),
@@ -417,8 +410,8 @@ class _WordLearningPageState extends State<WordLearningPage> {
             label,
             style: TextStyle(
               fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
+              fontWeight: FontWeight.w500,
+              color: theme.colorScheme.onSurface.withOpacity(0.5),
             ),
           ),
         ],
@@ -437,7 +430,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
             onTap: () => setState(() => _revealed = true),
             child: LiquidGlassCard(
               margin: const EdgeInsets.all(16),
-              borderRadius: 32,
+              borderRadius: 16,
               child: Stack(
                 children: [
                   Positioned(
@@ -445,17 +438,17 @@ class _WordLearningPageState extends State<WordLearningPage> {
                     right: 0,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
+                          horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1CB0F6).withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppTheme.kSystemTeal.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         'L${word.lessonNumber}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1CB0F6),
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.kSystemTeal,
                         ),
                       ),
                     ),
@@ -470,92 +463,92 @@ class _WordLearningPageState extends State<WordLearningPage> {
                             children: List.generate(
                               5,
                               (i) => Icon(
-                                Icons.star_rounded,
-                                size: 18,
+                                CupertinoIcons.star_fill,
+                                size: 16,
                                 color: i < progress.familiarity
-                                    ? const Color(0xFFFFC800)
+                                    ? AppTheme.kSystemYellow
                                     : theme.colorScheme.outline
-                                        .withOpacity(0.25),
+                                        .withOpacity(0.2),
                               ),
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 14),
                         ],
                         Text(
                           word.word,
                           style: TextStyle(
-                            fontSize: 40,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 36,
+                            fontWeight: FontWeight.w700,
                             color: theme.colorScheme.onSurface,
                             letterSpacing: 0.5,
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 12),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             _voiceButton(
                               theme: theme,
-                              label: '🇬🇧 英音',
+                              label: '英音',
                               accent: WordVoiceAccent.british,
                             ),
                             const SizedBox(width: 10),
                             _voiceButton(
                               theme: theme,
-                              label: '🇺🇸 美音',
+                              label: '美音',
                               accent: WordVoiceAccent.american,
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         Text(
                           word.phonetic,
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: 17,
                             color:
-                                theme.colorScheme.onSurface.withOpacity(0.6),
+                                theme.colorScheme.onSurface.withOpacity(0.5),
                             fontStyle: FontStyle.italic,
                           ),
                         ),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 24),
                         AnimatedOpacity(
-                          duration: const Duration(milliseconds: 240),
+                          duration: const Duration(milliseconds: 200),
                           opacity: _revealed ? 1 : 0,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 20, vertical: 14),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF58CC02)
+                              color: theme.colorScheme.primary
                                   .withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               word.meaning,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
                                 color: theme.colorScheme.onSurface,
                               ),
                             ),
                           ),
                         ),
                         if (!_revealed) ...[
-                          const SizedBox(height: 28),
+                          const SizedBox(height: 24),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.touch_app_rounded,
-                                  size: 16,
+                              Icon(CupertinoIcons.hand_draw,
+                                  size: 14,
                                   color: theme.colorScheme.onSurface
-                                      .withOpacity(0.4)),
+                                      .withOpacity(0.35)),
                               const SizedBox(width: 6),
                               Text(
                                 '点击卡片查看释义',
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: theme.colorScheme.onSurface
-                                      .withOpacity(0.4),
+                                      .withOpacity(0.35),
                                 ),
                               ),
                             ],
@@ -570,28 +563,28 @@ class _WordLearningPageState extends State<WordLearningPage> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
               Text(
                 '${_index + 1} / ${_vocab.length}',
                 style: TextStyle(
                   fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  fontWeight: FontWeight.w500,
+                  color: theme.colorScheme.onSurface.withOpacity(0.4),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(3),
                   child: LinearProgressIndicator(
                     value: (_index + 1) / _vocab.length,
-                    minHeight: 8,
+                    minHeight: 4,
                     backgroundColor:
                         theme.colorScheme.surface,
                     valueColor:
-                        const AlwaysStoppedAnimation(Color(0xFF58CC02)),
+                        AlwaysStoppedAnimation(theme.colorScheme.primary),
                   ),
                 ),
               ),
@@ -607,8 +600,8 @@ class _WordLearningPageState extends State<WordLearningPage> {
                 child: DuolingoButton(
                   label: '不认识',
                   variant: DuolingoButtonVariant.danger,
-                  minHeight: 60,
-                  borderRadius: 20,
+                  minHeight: 50,
+                  borderRadius: 12,
                   onPressed: _revealed ? () => _answer(false) : null,
                 ),
               ),
@@ -617,8 +610,8 @@ class _WordLearningPageState extends State<WordLearningPage> {
                 child: DuolingoButton(
                   label: '认识',
                   variant: DuolingoButtonVariant.success,
-                  minHeight: 60,
-                  borderRadius: 20,
+                  minHeight: 50,
+                  borderRadius: 12,
                   onPressed: _revealed ? () => _answer(true) : null,
                 ),
               ),
@@ -635,47 +628,38 @@ class _WordLearningPageState extends State<WordLearningPage> {
     required WordVoiceAccent accent,
   }) {
     final selected = WordTtsService.instance.defaultAccent == accent;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () => _speakWord(accent),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          decoration: BoxDecoration(
-            color: selected
-                ? theme.colorScheme.primary.withOpacity(0.14)
-                : theme.colorScheme.surface.withOpacity(0.48),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
+    return GestureDetector(
+      onTap: () => _speakWord(accent),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected
+              ? theme.colorScheme.primary.withOpacity(0.12)
+              : theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              CupertinoIcons.speaker_2_fill,
+              size: 14,
               color: selected
-                  ? theme.colorScheme.primary.withOpacity(0.34)
-                  : theme.colorScheme.outline.withOpacity(0.14),
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurface.withOpacity(0.5),
             ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.volume_up_rounded,
-                size: 15,
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
                 color: selected
                     ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurface.withOpacity(0.58),
+                    : theme.colorScheme.onSurface.withOpacity(0.6),
               ),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: selected
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.onSurface.withOpacity(0.70),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -688,29 +672,30 @@ class _WordLearningPageState extends State<WordLearningPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('🎉', style: TextStyle(fontSize: 56)),
+            Icon(CupertinoIcons.checkmark_seal_fill,
+                size: 56, color: AppTheme.kSystemBlue),
             const SizedBox(height: 12),
             Text(
-              _showDayFilter ? '第$_currentDay天单词已学完！' : '今日单词已学完！',
+              _showDayFilter ? '第$_currentDay天单词已学完' : '今日单词已学完',
               style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
                 color: theme.colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              '本词库共 ${_vocab.length} 词，\n记得回来复习哦～',
+              '本词库共 ${_vocab.length} 词',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 14,
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                fontSize: 15,
+                color: theme.colorScheme.onSurface.withOpacity(0.5),
               ),
             ),
             const SizedBox(height: 20),
             DuolingoButton(
               label: '重新开始',
-              icon: Icons.refresh_rounded,
+              icon: CupertinoIcons.refresh,
               variant: DuolingoButtonVariant.secondary,
               onPressed: () => setState(() {
                 _index = 0;
@@ -728,13 +713,14 @@ class _WordLearningPageState extends State<WordLearningPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('📭', style: TextStyle(fontSize: 48)),
+          Icon(CupertinoIcons.tray,
+              size: 48, color: theme.colorScheme.onSurface.withOpacity(0.2)),
           const SizedBox(height: 16),
           Text(
             _showDayFilter ? '第$_currentDay天暂无单词数据' : '暂无单词数据',
             style: TextStyle(
-              fontSize: 16,
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
+              fontSize: 15,
+              color: theme.colorScheme.onSurface.withOpacity(0.5),
             ),
           ),
           const SizedBox(height: 12),
@@ -763,29 +749,29 @@ class _WordLearningPageState extends State<WordLearningPage> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
         child: Container(
           height: MediaQuery.of(context).size.height * 0.7,
           decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
+            color: theme.scaffoldBackgroundColor,
           ),
           child: Column(
             children: [
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Container(
-                width: 40,
-                height: 4,
+                width: 36,
+                height: 5,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.outline.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2),
+                  color: theme.colorScheme.outline.withOpacity(0.25),
+                  borderRadius: BorderRadius.circular(3),
                 ),
               ),
               const SizedBox(height: 12),
               Text(
                 '生词本（${words.length}）',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 8),
@@ -796,12 +782,13 @@ class _WordLearningPageState extends State<WordLearningPage> {
                           '还没有生词\n点"不认识"即可加入',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: theme.colorScheme.onSurface.withOpacity(0.4),
+                            fontSize: 15,
+                            color: theme.colorScheme.onSurface.withOpacity(0.35),
                           ),
                         ),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         itemCount: words.length,
                         itemBuilder: (_, i) {
                           final w = words[i];
@@ -824,34 +811,37 @@ class _WordLearningPageState extends State<WordLearningPage> {
                                     children: [
                                       Text(w.word,
                                           style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w800)),
+                                              fontSize: 17,
+                                              fontWeight: FontWeight.w600)),
                                       if (vw != null)
                                         Text(vw.phonetic,
                                             style: TextStyle(
-                                                fontSize: 12,
+                                                fontSize: 13,
                                                 color: theme.colorScheme
                                                     .onSurface
-                                                    .withOpacity(0.5))),
+                                                    .withOpacity(0.4))),
                                       if (vw != null)
                                         Text(vw.meaning,
                                             style: TextStyle(
                                                 fontSize: 13,
                                                 color: theme.colorScheme
                                                     .onSurface
-                                                    .withOpacity(0.7))),
+                                                    .withOpacity(0.6))),
                                     ],
                                   ),
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline,
-                                      color: Color(0xFFFF4B4B)),
-                                  onPressed: () async {
+                                GestureDetector(
+                                  onTap: () async {
                                     w.inNotebook = false;
                                     await StorageService.instance
                                         .saveWord(w);
                                     setState(() {});
                                   },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8),
+                                    child: Icon(CupertinoIcons.delete,
+                                        size: 20, color: AppTheme.kSystemRed),
+                                  ),
                                 ),
                               ],
                             ),

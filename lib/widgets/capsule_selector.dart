@@ -1,10 +1,8 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../services/haptic_service.dart';
 
-/// 胶囊选择组件（教材下拉选择 / 通用分段选择）
-///
-/// 多邻国风格：大圆角、柔和配色、按压挤压回弹、统一触觉反馈。
-/// 双端表现一致。
 class CapsuleSelector<T> extends StatefulWidget {
   final List<CapsuleOption<T>> options;
   final T value;
@@ -31,87 +29,54 @@ class CapsuleOption<T> {
 }
 
 class _CapsuleSelectorState<T> extends State<CapsuleSelector<T>> {
-  int? _pressedIndex;
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withOpacity(0.06)
-            : Colors.black.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(28),
-      ),
-      child: Row(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accentColor =
+        isDark ? AppTheme.kSystemBlueDark : AppTheme.kSystemBlue;
+    final thumbColor =
+        isDark ? AppTheme.kCardBgDark : AppTheme.kCardBgLight;
+    const unselectedTextColor = Color(0xFF8E8E93);
+
+    final Map<T, Widget> segments = {};
+    for (final opt in widget.options) {
+      final selected = opt.value == widget.value;
+      segments[opt.value] = Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          for (int i = 0; i < widget.options.length; i++)
-            Expanded(child: _buildSegment(i, isDark, theme)),
+          if (opt.icon != null) ...[
+            Icon(
+              opt.icon,
+              size: 16,
+              color: selected ? accentColor : unselectedTextColor,
+            ),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            opt.label,
+            style: TextStyle(
+              color: selected ? accentColor : unselectedTextColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+            ),
+          ),
         ],
-      ),
-    );
-  }
+      );
+    }
 
-  Widget _buildSegment(int i, bool isDark, ThemeData theme) {
-    final opt = widget.options[i];
-    final selected = opt.value == widget.value;
-    final pressed = _pressedIndex == i;
-
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressedIndex = i),
-      onTapUp: (_) {
-        setState(() => _pressedIndex = null);
-        if (!selected) {
+    return CupertinoSlidingSegmentedControl<T>(
+      groupValue: widget.value,
+      thumbColor: thumbColor,
+      padding: const EdgeInsets.all(2),
+      children: segments,
+      onValueChanged: (T? newValue) {
+        if (newValue == null) return;
+        if (newValue != widget.value) {
           if (widget.enableHaptic) HapticService.selection();
-          widget.onChanged(opt.value);
+          widget.onChanged(newValue);
         }
       },
-      onTapCancel: () => setState(() => _pressedIndex = null),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutBack,
-        transform: Matrix4.identity()..scale(pressed ? 0.95 : 1.0),
-        transformAlignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? const Color(0xFF58CC02)
-              : (isDark ? Colors.white.withOpacity(0.04) : Colors.transparent),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: const Color(0xFF58CC02).withOpacity(0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (opt.icon != null) ...[
-              Icon(opt.icon,
-                  size: 16,
-                  color: selected ? Colors.white : theme.colorScheme.onSurface.withOpacity(0.7)),
-              const SizedBox(width: 6),
-            ],
-            Text(
-              opt.label,
-              style: TextStyle(
-                color: selected
-                    ? Colors.white
-                    : theme.colorScheme.onSurface.withOpacity(0.7),
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

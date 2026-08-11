@@ -1,11 +1,13 @@
 import 'dart:ui';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'duolingo_button.dart';
 import '../data/achievements_data.dart';
+import '../theme/app_theme.dart';
 
 /// 成就解锁庆祝弹窗
 ///
-/// 多邻国风格 + 液态玻璃：弹性出场动画、礼花、统一触觉反馈。
+/// iOS 原生风格：磨砂玻璃质感、系统配色、柔和出场动画。
 class CelebrationDialog extends StatefulWidget {
   final AchievementDef achievement;
   const CelebrationDialog({super.key, required this.achievement});
@@ -35,13 +37,13 @@ class _CelebrationDialogState extends State<CelebrationDialog>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 520),
+      duration: const Duration(milliseconds: 300),
     );
-    _scale = Tween<double>(begin: 0.4, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+    _scale = Tween<double>(begin: 0.85, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
     _fade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
     _controller.forward();
   }
@@ -54,101 +56,120 @@ class _CelebrationDialogState extends State<CelebrationDialog>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurfaceColor = isDark ? Colors.white : Colors.black;
     return FadeTransition(
       opacity: _fade,
       child: ScaleTransition(
         scale: _scale,
         alignment: Alignment.center,
-        child: Dialog(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(32),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                padding: const EdgeInsets.all(28),
-                decoration: BoxDecoration(
-                  color: theme.brightness == Brightness.dark
-                      ? Colors.white.withOpacity(0.10)
-                      : Colors.white.withOpacity(0.85),
-                  borderRadius: BorderRadius.circular(32),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.6),
-                    width: 1.5,
-                  ),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('🎉', style: TextStyle(fontSize: 40)),
-                    const SizedBox(height: 8),
-                    Text(
-                      '成就解锁！',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: theme.colorScheme.onSurface,
-                      ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF1C1C1E).withOpacity(0.90)
+                        : Colors.white.withOpacity(0.90),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.08)
+                          : Colors.black.withOpacity(0.04),
+                      width: 0.5,
                     ),
-                    const SizedBox(height: 20),
-                    Container(
-                      width: 96,
-                      height: 96,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const SweepGradient(
-                          colors: [
-                            Color(0xFFFFC800),
-                            Color(0xFFFF9600),
-                            Color(0xFFCE82FF),
-                            Color(0xFF1CB0F6),
-                            Color(0xFF58CC02),
-                            Color(0xFFFFC800),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        CupertinoIcons.sparkles,
+                        size: 32,
+                        color: isDark
+                            ? AppTheme.kSystemBlueDark
+                            : AppTheme.kSystemBlue,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        '成就解锁！',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isDark
+                              ? AppTheme.kSystemBlueDark
+                              : AppTheme.kSystemBlue,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Container(
+                        width: 88,
+                        height: 88,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              isDark
+                                  ? AppTheme.kSystemBlueDark
+                                  : AppTheme.kSystemBlue,
+                              isDark
+                                  ? AppTheme.kSystemPurpleDark
+                                  : AppTheme.kSystemPurple,
+                            ],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (isDark
+                                      ? AppTheme.kSystemBlueDark
+                                      : AppTheme.kSystemBlue)
+                                  .withOpacity(0.30),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
+                            ),
                           ],
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFFFC800).withOpacity(0.4),
-                            blurRadius: 24,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
+                        alignment: Alignment.center,
+                        child: Text(
+                          widget.achievement.emoji,
+                          style: const TextStyle(fontSize: 44),
+                        ),
                       ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        widget.achievement.emoji,
-                        style: const TextStyle(fontSize: 48),
+                      const SizedBox(height: 16),
+                      Text(
+                        widget.achievement.title,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: onSurfaceColor,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 18),
-                    Text(
-                      widget.achievement.title,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: theme.colorScheme.onSurface,
+                      const SizedBox(height: 6),
+                      Text(
+                        widget.achievement.desc,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w400,
+                          color: onSurfaceColor.withOpacity(0.60),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      widget.achievement.desc,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      const SizedBox(height: 22),
+                      SizedBox(
+                        width: double.infinity,
+                        child: DuolingoButton(
+                          label: '太棒了！',
+                          variant: DuolingoButtonVariant.primary,
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: DuolingoButton(
-                        label: '太棒了！',
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

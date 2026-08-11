@@ -1,10 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
-/// 液态玻璃磨砂卡片（iOS 质感 + 双端统一表现）
+/// iOS 风格磨砂卡片（Apple Liquid Glass 质感）
 ///
-/// 使用 BackdropFilter 实现毛玻璃效果，叠加渐变高光与柔和阴影。
-/// 不依赖任何平台专属 API，Android / iOS 表现一致。
+/// 半透明背景 + 柔和毛玻璃模糊，按压时透明度变化（非缩放）。
 class LiquidGlassCard extends StatefulWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -21,8 +21,8 @@ class LiquidGlassCard extends StatefulWidget {
     required this.child,
     this.padding,
     this.margin,
-    this.blurRadius = 18,
-    this.borderRadius = 24,
+    this.blurRadius = 15,
+    this.borderRadius = 12,
     this.glassColor,
     this.boxShadow,
     this.onTap,
@@ -46,14 +46,12 @@ class _LiquidGlassCardState extends State<LiquidGlassCard> {
     final isDark = theme.brightness == Brightness.dark;
     final base = widget.glassColor ??
         (isDark
-            ? Colors.white.withOpacity(0.08)
-            : Colors.white.withOpacity(0.55));
+            ? const Color(0xCC1C1C1E)
+            : const Color(0xCCFFFFFF));
     final content = AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
-      curve: Curves.easeOutBack,
-      margin: widget.margin ?? const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      transform: Matrix4.identity()..scale(_pressed ? 0.97 : 1.0),
-      transformAlignment: Alignment.center,
+      duration: const Duration(milliseconds: 150),
+      margin: widget.margin ??
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(widget.borderRadius),
         child: BackdropFilter(
@@ -61,35 +59,31 @@ class _LiquidGlassCardState extends State<LiquidGlassCard> {
             sigmaX: widget.blurRadius,
             sigmaY: widget.blurRadius,
           ),
-          child: Container(
-            decoration: BoxDecoration(
-              color: base,
-              borderRadius: BorderRadius.circular(widget.borderRadius),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withOpacity(0.12)
-                    : Colors.white.withOpacity(0.7),
-                width: 1.2,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 100),
+            opacity: _pressed ? 0.6 : 1.0,
+            child: Container(
+              decoration: BoxDecoration(
+                color: base,
+                borderRadius: BorderRadius.circular(widget.borderRadius),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.08)
+                      : Colors.black.withOpacity(0.04),
+                  width: 0.5,
+                ),
+                boxShadow: widget.boxShadow ??
+                    [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(isDark ? 0.3 : 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
               ),
-              boxShadow: widget.boxShadow ??
-                  [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white.withOpacity(isDark ? 0.10 : 0.35),
-                  Colors.white.withOpacity(0.0),
-                ],
-              ),
+              padding: widget.padding ?? const EdgeInsets.all(16),
+              child: widget.child,
             ),
-            padding: widget.padding ?? const EdgeInsets.all(16),
-            child: widget.child,
           ),
         ),
       ),

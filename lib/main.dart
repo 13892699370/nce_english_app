@@ -10,13 +10,10 @@ import 'pages/home_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // 锁定竖屏，双端一致体验
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
   ]);
-  // 初始化 Hive 存储
   await StorageService.instance.init();
-  // 初始化主题与教材
   ThemeService.instance.init();
   TextbookService.instance.init();
   await AudioFeedbackService.instance.init();
@@ -38,6 +35,15 @@ class NceApp extends StatelessWidget {
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
           themeMode: ThemeService.instance.mode,
+          builder: (context, child) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            return CupertinoTheme(
+              data: AppTheme.cupertinoTheme(
+                isDark ? Brightness.dark : Brightness.light,
+              ),
+              child: child!,
+            );
+          },
           home: const HomePage(),
         );
       },

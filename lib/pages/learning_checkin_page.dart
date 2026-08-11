@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../data/textbook_registry.dart';
 import '../data/lesson.dart';
@@ -8,17 +9,16 @@ import '../services/storage_service.dart';
 import '../services/textbook_service.dart';
 import '../services/achievement_service.dart';
 import '../services/haptic_service.dart';
+import '../theme/app_theme.dart';
 import '../utils/date_util.dart';
 import '../widgets/liquid_glass_card.dart';
 import '../widgets/textbook_dropdown.dart';
 import '../widgets/task_checkbox.dart';
 import '../widgets/celebration_dialog.dart';
 import '../widgets/day_completion_overlay.dart';
+import '../widgets/theme_toggle_button.dart';
 
-/// 新概念学习打卡页
-///
-/// 天数标识：第X天，每天绑定 2 节课（单数新课 + 双数复习课）。
-/// 勾选/取消任务自动实时保存（防抖 500ms），完成当天全部任务自动跳转下一天。
+/// 新概念学习打卡页（iOS 原生风格）
 class LearningCheckinPage extends StatefulWidget {
   const LearningCheckinPage({super.key});
 
@@ -31,14 +31,12 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
   int _currentDay = 1;
   String _today = '';
 
-  // 编辑缓冲
   List<bool> _preview = [];
   List<bool> _formal = [];
   List<bool> _review = [];
   final TextEditingController _imitationCtrl = TextEditingController();
   bool _loading = true;
 
-  // 防抖
   Timer? _debounceTimer;
   bool _isSaving = false;
 
@@ -58,7 +56,6 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
     super.dispose();
   }
 
-  /// 初始化当前天数（从持久化读取，默认第1天）
   void _initDay() {
     final tbId = TextbookService.instance.currentId;
     _currentDay = StorageService.instance.currentDayOf(tbId);
@@ -66,7 +63,6 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
     _loadCheckin();
   }
 
-  /// 监听教材切换：刷新课程、重置天数、清空状态
   void _onTextbookNotification() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -94,7 +90,6 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
     return info.totalDays;
   }
 
-  /// 获取当前天的课程列表
   List<Lesson> get _dayLessons =>
       _lessons.where((l) => l.dayNumber == _currentDay).toList();
 
@@ -128,7 +123,6 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
     _loadCheckin();
   }
 
-  /// 防抖保存：勾选/取消后延迟 500ms 写入
   void _debouncedSave() {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
@@ -136,7 +130,6 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
     });
   }
 
-  /// 立即保存（用于切换天数/离开页面时）
   Future<void> _immediateSave() async {
     _debounceTimer?.cancel();
     await _doSave();
@@ -166,11 +159,9 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
     );
     await StorageService.instance.saveCheckin(checkin);
 
-    // 同步更新当前教材的学习天数
     await StorageService.instance.setCurrentDay(
         TextbookService.instance.currentId, _currentDay);
 
-    // 成就检测
     final unlocked = await AchievementService.instance.checkAndUnlock();
     if (!mounted) {
       _isSaving = false;
@@ -183,7 +174,6 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
       }
     }
 
-    // 如果当天全部完成，自动跳转下一天
     if (checkin.isAllDone && _currentDay < _totalDays()) {
       _jumpToNextDay();
     }
@@ -191,7 +181,6 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
     _isSaving = false;
   }
 
-  /// 跳转到下一天
   void _jumpToNextDay() {
     HapticService.medium();
     Future.delayed(const Duration(milliseconds: 180), () async {
@@ -209,9 +198,9 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
       _loadCheckin();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('🌟 打卡完成，进入第$_currentDay天！'),
+          content: Text('打卡完成，进入第$_currentDay天'),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFF58CC02),
+          backgroundColor: AppTheme.kSystemBlue,
           duration: const Duration(seconds: 2),
         ),
       );
@@ -225,7 +214,6 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
       _loading = true;
     });
     _loadCheckin();
-    // 仅持久化当前天数，不触发 _doSave 以避免切换到已完成天时误触自动跳转
     StorageService.instance.setCurrentDay(
         TextbookService.instance.currentId, day);
   }
@@ -255,113 +243,88 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
         .toList();
     final totalDays = _totalDays();
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            // 顶部：教材下拉 + 今日日期
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Text('📚 学习打卡',
-                          style: TextStyle(
-                              fontSize: 24, fontWeight: FontWeight.w800)),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '今日 $_today',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  TextbookDropdown(
-                    options: textbooks,
-                    value: TextbookService.instance.currentId,
-                    onChanged: _onTextbookChanged,
-                  ),
-                ],
-              ),
-            ),
-
-            // 天数选择
-            SizedBox(
-              height: 56,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                itemCount: totalDays,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (_, i) {
-                  final day = i + 1;
-                  final selected = day == _currentDay;
-                  return GestureDetector(
-                    onTap: () => _onDayChanged(day),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      curve: Curves.easeOutBack,
-                      transform: Matrix4.identity()
-                        ..scale(selected ? 1.0 : 0.94),
-                      transformAlignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.surface.withOpacity(0.6),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: selected
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.outline.withOpacity(0.2),
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '第$day天',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: selected
-                                  ? Colors.white
-                                  : theme.colorScheme.onSurface,
-                            ),
-                          ),
-                        ],
+    return CupertinoPageScaffold(
+      navigationBar: const CupertinoNavigationBar(
+        middle: Text('打卡'),
+        trailing: ThemeToggleButton(),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextbookDropdown(
+                        options: textbooks,
+                        value: TextbookService.instance.currentId,
+                        onChanged: _onTextbookChanged,
                       ),
                     ),
-                  );
-                },
-              ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _today,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                        color: theme.colorScheme.onSurface.withOpacity(0.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-
-            const SizedBox(height: 4),
-
-            // 任务区
-            Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _buildTaskArea(theme),
+          ),
+          SizedBox(
+            height: 48,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: totalDays,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (_, i) {
+                final day = i + 1;
+                final selected = day == _currentDay;
+                return GestureDetector(
+                  onTap: () => _onDayChanged(day),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    curve: Curves.easeOut,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '第$day天',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                          color: selected
+                              ? Colors.white
+                              : theme.colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 4),
+          Expanded(
+            child: _loading
+                ? const Center(child: CupertinoActivityIndicator())
+                : _buildTaskArea(theme),
+          ),
+        ],
       ),
     );
   }
@@ -369,13 +332,19 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
   Widget _buildTaskArea(ThemeData theme) {
     final dayLessons = _dayLessons;
     if (dayLessons.isEmpty) {
-      return const Center(child: Text('暂无课程数据'));
+      return Center(
+        child: Text(
+          '暂无课程数据',
+          style: TextStyle(
+            color: theme.colorScheme.onSurface.withOpacity(0.4),
+          ),
+        ),
+      );
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 40),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
       children: [
-        // 天数标题卡
         LiquidGlassCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -383,18 +352,18 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
               Row(
                 children: [
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(14),
+                      color: theme.colorScheme.primary.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       '$_currentDay',
                       style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
                         color: theme.colorScheme.primary,
                       ),
                     ),
@@ -407,17 +376,16 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                         Text(
                           '第$_currentDay天',
                           style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           '${TextbookService.instance.current.name} · ${dayLessons.map((l) => 'L${l.number}（${l.isNew ? "新课" : "复习"}）').join(' + ')}',
                           style: TextStyle(
-                            fontSize: 12,
-                            color:
-                                theme.colorScheme.onSurface.withOpacity(0.55),
+                            fontSize: 13,
+                            color: theme.colorScheme.onSurface.withOpacity(0.5),
                           ),
                         ),
                       ],
@@ -425,7 +393,6 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                   ),
                 ],
               ),
-              // 课程标题列表
               const SizedBox(height: 12),
               ...dayLessons.map((l) => Padding(
                     padding: const EdgeInsets.only(bottom: 6),
@@ -436,18 +403,18 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: l.isNew
-                                ? const Color(0xFF1CB0F6).withOpacity(0.15)
-                                : const Color(0xFFFFC800).withOpacity(0.18),
-                            borderRadius: BorderRadius.circular(8),
+                                ? AppTheme.kSystemTeal.withOpacity(0.12)
+                                : AppTheme.kSystemOrange.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             'L${l.number} · ${l.isNew ? "新课" : "复习"}',
                             style: TextStyle(
                               fontSize: 11,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                               color: l.isNew
-                                  ? const Color(0xFF1CB0F6)
-                                  : const Color(0xFFE0A800),
+                                  ? AppTheme.kSystemTeal
+                                  : AppTheme.kSystemOrange,
                             ),
                           ),
                         ),
@@ -457,8 +424,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                             l.title,
                             style: TextStyle(
                               fontSize: 13,
-                              color:
-                                  theme.colorScheme.onSurface.withOpacity(0.7),
+                              color: theme.colorScheme.onSurface.withOpacity(0.6),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -471,42 +437,35 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
           ),
         ),
 
-        // 预习
         _buildSection(
           theme: theme,
-          icon: '🎧',
+          icon: CupertinoIcons.headphones,
           title: '预习任务',
           labels: kPreviewTaskLabels,
           states: _preview,
           section: 0,
         ),
-
-        // 正式学习
         _buildSection(
           theme: theme,
-          icon: '🎬',
+          icon: CupertinoIcons.film,
           title: '正式学习',
           labels: kFormalTaskLabels,
           states: _formal,
           section: 1,
           extra: Padding(
-            padding: const EdgeInsets.only(top: 8, left: 4, right: 4),
-            child: TextField(
+            padding: const EdgeInsets.only(top: 8),
+            child: CupertinoTextField(
               controller: _imitationCtrl,
               maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: '✍️ 在此仿写本课句型句子…',
-                contentPadding: EdgeInsets.all(14),
-              ),
+              placeholder: '在此仿写本课句型句子…',
+              padding: const EdgeInsets.all(14),
               onChanged: (_) => _debouncedSave(),
             ),
           ),
         ),
-
-        // 复习
         _buildSection(
           theme: theme,
-          icon: '🔁',
+          icon: CupertinoIcons.arrow_2_circlepath,
           title: '复习任务',
           labels: kReviewTaskLabels,
           states: _review,
@@ -514,13 +473,12 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
         ),
 
         const SizedBox(height: 8),
-        // 保存提示
         Center(
           child: Text(
-            _isSaving ? '保存中…' : '✓ 自动保存',
+            _isSaving ? '保存中…' : '已自动保存',
             style: TextStyle(
               fontSize: 12,
-              color: theme.colorScheme.onSurface.withOpacity(0.4),
+              color: theme.colorScheme.onSurface.withOpacity(0.35),
             ),
           ),
         ),
@@ -530,7 +488,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
 
   Widget _buildSection({
     required ThemeData theme,
-    required String icon,
+    required IconData icon,
     required String title,
     required List<String> labels,
     required List<bool> states,
@@ -544,13 +502,13 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
         children: [
           Row(
             children: [
-              Text(icon, style: const TextStyle(fontSize: 22)),
+              Icon(icon, size: 20, color: theme.colorScheme.primary),
               const SizedBox(width: 8),
               Text(
                 title,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const Spacer(),
@@ -559,24 +517,24 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: doneCount == labels.length
-                      ? const Color(0xFF58CC02).withOpacity(0.15)
+                      ? AppTheme.kSystemGreen.withOpacity(0.12)
                       : theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '$doneCount/${labels.length}',
                   style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                     color: doneCount == labels.length
-                        ? const Color(0xFF58CC02)
-                        : theme.colorScheme.onSurface.withOpacity(0.6),
+                        ? AppTheme.kSystemGreen
+                        : theme.colorScheme.onSurface.withOpacity(0.5),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           for (int i = 0; i < labels.length; i++)
             TaskCheckbox(
               label: labels[i],

@@ -1,8 +1,9 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import '../services/haptic_service.dart';
 import '../theme/app_theme.dart';
 
-/// iOS 风格按钮（CupertinoButton 行为：按压透明度变化，无缩放）
+/// iOS 风格按钮（弹性按压微交互 + 低端设备降级）
 ///
 /// 4 种变体：primary（蓝色填充）、secondary（蓝色文字）、success（绿色）、danger（红色）
 enum DuolingoButtonVariant {
@@ -38,15 +39,46 @@ class DuolingoButton extends StatefulWidget {
   State<DuolingoButton> createState() => _DuolingoButtonState();
 }
 
-class _DuolingoButtonState extends State<DuolingoButton> {
+class _DuolingoButtonState extends State<DuolingoButton>
+    with SingleTickerProviderStateMixin {
   bool _pressed = false;
+  late final AnimationController _pressController;
 
-  void _onTapDown() => setState(() => _pressed = true);
-  void _onTapCancel() => setState(() => _pressed = false);
+  static final bool _isLowEndDevice = Platform.numberOfProcessors < 4;
+
+  @override
+  void initState() {
+    super.initState();
+    _pressController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 120),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pressController.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown() {
+    _pressed = true;
+    _pressController.forward();
+    setState(() {});
+  }
+
+  void _onTapCancel() {
+    _pressed = false;
+    _pressController.reverse();
+    setState(() {});
+  }
+
   void _onTapUp() {
-    setState(() => _pressed = false);
+    _pressed = false;
+    _pressController.reverse();
     if (widget.enableHaptic) HapticService.light();
     widget.onPressed?.call();
+    setState(() {});
   }
 
   (Color, Color) _colors() {
@@ -77,20 +109,29 @@ class _DuolingoButtonState extends State<DuolingoButton> {
     final isSecondary = widget.variant == DuolingoButtonVariant.secondary;
     final disabled = widget.onPressed == null;
     final (bg, fg) = _colors();
-    final theme = Theme.of(context);
 
     final displayBg = disabled ? Colors.grey.shade300 : bg;
     final displayFg = disabled
         ? (isSecondary ? Colors.grey : Colors.white)
         : fg;
 
+    final pressScale = _isLowEndDevice ? 1.0 : 0.96;
+
     final inner = GestureDetector(
       onTapDown: disabled ? null : (_) => _onTapDown(),
       onTapCancel: disabled ? null : _onTapCancel,
       onTapUp: disabled ? null : (_) => _onTapUp(),
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 100),
-        opacity: _pressed ? 0.5 : 1.0,
+      child: AnimatedBuilder(
+        animation: _pressController,
+        builder: (context, child) {
+          final t = _pressController.value;
+          final scale = 1.0 + (pressScale - 1.0) * t;
+          final opacity = 1.0 - 0.4 * t;
+          return Transform.scale(
+            scale: scale,
+            child: Opacity(opacity: opacity, child: child),
+          );
+        },
         child: Container(
           constraints: BoxConstraints(minHeight: widget.minHeight),
           alignment: Alignment.center,

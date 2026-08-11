@@ -201,7 +201,9 @@ class _WordLearningPageState extends State<WordLearningPage> {
         middle: Text('单词'),
         trailing: ThemeToggleButton(),
       ),
-      child: Column(
+      child: Material(
+        color: Colors.transparent,
+        child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -309,6 +311,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
                         : _buildWordCard(theme),
           ),
         ],
+        ),
       ),
     );
   }

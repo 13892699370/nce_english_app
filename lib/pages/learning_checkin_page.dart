@@ -248,7 +248,9 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
         middle: Text('打卡'),
         trailing: ThemeToggleButton(),
       ),
-      child: Column(
+      child: Material(
+        color: Colors.transparent,
+        child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -325,6 +327,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                 : _buildTaskArea(theme),
           ),
         ],
+        ),
       ),
     );
   }

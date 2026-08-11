@@ -34,7 +34,9 @@ class _AchievementPageState extends State<AchievementPage> {
         middle: Text('成就'),
         trailing: ThemeToggleButton(),
       ),
-      child: ListView(
+      child: Material(
+        color: Colors.transparent,
+        child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           LiquidGlassCard(
@@ -105,6 +107,7 @@ class _AchievementPageState extends State<AchievementPage> {
                 all: all,
               )),
         ],
+        ),
       ),
     );
   }

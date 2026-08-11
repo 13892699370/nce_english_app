@@ -5,10 +5,13 @@ import '../models/word_progress.dart';
 import '../services/storage_service.dart';
 import '../services/textbook_service.dart';
 import '../services/haptic_service.dart';
+import '../services/audio_feedback_service.dart';
+import '../services/word_tts_service.dart';
 import '../utils/date_util.dart';
 import '../widgets/liquid_glass_card.dart';
 import '../widgets/duolingo_button.dart';
 import '../widgets/textbook_dropdown.dart';
+import '../widgets/day_wheel_picker.dart';
 
 /// 单词学习页（仿百词斩）
 ///
@@ -118,6 +121,28 @@ class _WordLearningPageState extends State<WordLearningPage> {
     return info.totalDays;
   }
 
+  Future<void> _toggleSoundEffects(bool value) async {
+    await AudioFeedbackService.instance.setEnabled(value);
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _speakWord(WordVoiceAccent accent) async {
+    final message = await WordTtsService.instance.speak(
+      _current.word,
+      accent: accent,
+      saveAsDefault: true,
+    );
+    if (!mounted) return;
+    setState(() {});
+    if (message == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   Future<void> _onTextbookChanged(String id) async {
     await TextbookService.instance.select(id);
     setState(() {
@@ -130,6 +155,11 @@ class _WordLearningPageState extends State<WordLearningPage> {
 
   Future<void> _answer(bool known) async {
     if (_vocab.isEmpty || _index >= _vocab.length) return;
+    if (known) {
+      AudioFeedbackService.instance.playKnown();
+    } else {
+      AudioFeedbackService.instance.playUnknown();
+    }
     final tbId = TextbookService.instance.currentId;
     final today = DateUtil.today();
     final existing = StorageService.instance.getWord(tbId, _current.word);
@@ -209,6 +239,17 @@ class _WordLearningPageState extends State<WordLearningPage> {
                               ),
                             ],
                           ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Tooltip(
+                        message: AudioFeedbackService.instance.enabled
+                            ? '关闭反馈音效'
+                            : '开启反馈音效',
+                        child: Switch(
+                          value: AudioFeedbackService.instance.enabled,
+                          activeColor: const Color(0xFF58CC02),
+                          onChanged: _toggleSoundEffects,
                         ),
                       ),
                     ],
@@ -329,35 +370,18 @@ class _WordLearningPageState extends State<WordLearningPage> {
         if (_showDayFilter) ...[
           const SizedBox(width: 8),
           Expanded(
-            child: DropdownButtonFormField<int>(
-              value: _currentDay,
-              decoration: InputDecoration(
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: theme.colorScheme.surface.withOpacity(0.5),
-              ),
-              items: List.generate(_totalDays, (i) {
-                final day = i + 1;
-                return DropdownMenuItem(
-                  value: day,
-                  child: Text('第$day天', style: const TextStyle(fontSize: 13)),
-                );
-              }),
-              onChanged: (v) {
-                if (v != null) {
-                  setState(() {
-                    _currentDay = v;
-                    _loading = true;
-                  });
-                  _reloadVocab();
-                  StorageService.instance
-                      .setCurrentDay(TextbookService.instance.currentId, v);
-                }
+            child: DayWheelPicker(
+              currentDay: _currentDay,
+              totalDays: _totalDays,
+              onChanged: (day) {
+                if (day == _currentDay) return;
+                setState(() {
+                  _currentDay = day;
+                  _loading = true;
+                });
+                _reloadVocab();
+                StorageService.instance
+                    .setCurrentDay(TextbookService.instance.currentId, day);
               },
             ),
           ),
@@ -465,6 +489,23 @@ class _WordLearningPageState extends State<WordLearningPage> {
                             color: theme.colorScheme.onSurface,
                             letterSpacing: 0.5,
                           ),
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _voiceButton(
+                              theme: theme,
+                              label: '🇬🇧 英音',
+                              accent: WordVoiceAccent.british,
+                            ),
+                            const SizedBox(width: 10),
+                            _voiceButton(
+                              theme: theme,
+                              label: '🇺🇸 美音',
+                              accent: WordVoiceAccent.american,
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -585,6 +626,58 @@ class _WordLearningPageState extends State<WordLearningPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _voiceButton({
+    required ThemeData theme,
+    required String label,
+    required WordVoiceAccent accent,
+  }) {
+    final selected = WordTtsService.instance.defaultAccent == accent;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => _speakWord(accent),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: selected
+                ? theme.colorScheme.primary.withOpacity(0.14)
+                : theme.colorScheme.surface.withOpacity(0.48),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: selected
+                  ? theme.colorScheme.primary.withOpacity(0.34)
+                  : theme.colorScheme.outline.withOpacity(0.14),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.volume_up_rounded,
+                size: 15,
+                color: selected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface.withOpacity(0.58),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: selected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurface.withOpacity(0.70),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

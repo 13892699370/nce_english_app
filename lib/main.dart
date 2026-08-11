@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'services/storage_service.dart';
 import 'services/theme_service.dart';
 import 'services/textbook_service.dart';
+import 'services/audio_feedback_service.dart';
+import 'services/word_tts_service.dart';
 import 'theme/app_theme.dart';
 import 'pages/home_page.dart';
 
@@ -17,6 +19,8 @@ void main() async {
   // 初始化主题与教材
   ThemeService.instance.init();
   TextbookService.instance.init();
+  await AudioFeedbackService.instance.init();
+  await WordTtsService.instance.init();
   runApp(const NceApp());
 }
 

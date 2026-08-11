@@ -19,6 +19,7 @@ class StorageService extends ChangeNotifier {
   late Box<WordProgress> _wordBox;
   late Box<AchievementUnlock> _achievementBox;
   late Box<AppSettings> _settingsBox;
+  late Box<dynamic> _preferencesBox;
 
   bool _initialized = false;
 
@@ -37,6 +38,7 @@ class StorageService extends ChangeNotifier {
       _wordBox = await Hive.openBox<WordProgress>('words');
       _achievementBox = await Hive.openBox<AchievementUnlock>('achievements');
       _settingsBox = await Hive.openBox<AppSettings>('settings');
+      _preferencesBox = await Hive.openBox<dynamic>('preferences');
 
       _initialized = true;
     } catch (e) {
@@ -199,5 +201,45 @@ class StorageService extends ChangeNotifier {
   /// 获取指定教材的当前学习天数
   int currentDayOf(String textbookId) {
     return settings().currentDayOf(textbookId);
+  }
+
+  // ---------------- 通用偏好 ----------------
+  //
+  // 新增功能偏好单独存在普通 Hive Box 中，不改动已有 Hive 模型字段与 TypeAdapter。
+
+  bool boolPref(String key, {bool defaultValue = false}) {
+    try {
+      return (_preferencesBox.get(key) as bool?) ?? defaultValue;
+    } catch (e) {
+      debugPrint('boolPref error: $e');
+      return defaultValue;
+    }
+  }
+
+  Future<void> setBoolPref(String key, bool value) async {
+    try {
+      await _preferencesBox.put(key, value);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('setBoolPref error: $e');
+    }
+  }
+
+  String stringPref(String key, {String defaultValue = ''}) {
+    try {
+      return (_preferencesBox.get(key) as String?) ?? defaultValue;
+    } catch (e) {
+      debugPrint('stringPref error: $e');
+      return defaultValue;
+    }
+  }
+
+  Future<void> setStringPref(String key, String value) async {
+    try {
+      await _preferencesBox.put(key, value);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('setStringPref error: $e');
+    }
   }
 }

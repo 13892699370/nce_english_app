@@ -13,6 +13,7 @@ import '../widgets/liquid_glass_card.dart';
 import '../widgets/textbook_dropdown.dart';
 import '../widgets/task_checkbox.dart';
 import '../widgets/celebration_dialog.dart';
+import '../widgets/day_completion_overlay.dart';
 
 /// 新概念学习打卡页
 ///
@@ -193,7 +194,9 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
   /// 跳转到下一天
   void _jumpToNextDay() {
     HapticService.medium();
-    Future.delayed(const Duration(milliseconds: 300), () {
+    Future.delayed(const Duration(milliseconds: 180), () async {
+      if (!mounted) return;
+      await DayCompletionOverlay.show(context, nextDay: _currentDay + 1);
       if (!mounted) return;
       setState(() {
         _currentDay += 1;

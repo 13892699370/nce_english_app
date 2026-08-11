@@ -39,6 +39,9 @@ ios/DerivedData/
 web/icons/
 web/favicon.png
 
+# Build artifacts
+dist/
+
 # IDE
 .idea/
 .vscode/

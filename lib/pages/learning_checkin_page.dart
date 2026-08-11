@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../data/textbook_registry.dart';
 import '../data/lesson.dart';
@@ -8,15 +10,14 @@ import '../services/achievement_service.dart';
 import '../services/haptic_service.dart';
 import '../utils/date_util.dart';
 import '../widgets/liquid_glass_card.dart';
-import '../widgets/duolingo_button.dart';
-import '../widgets/capsule_selector.dart';
+import '../widgets/textbook_dropdown.dart';
 import '../widgets/task_checkbox.dart';
 import '../widgets/celebration_dialog.dart';
 
 /// 新概念学习打卡页
 ///
-/// 教材下拉选择 -> 课程单元（1组=新课+复习课） ->
-/// 预习 / 正式学习 / 复习 完整流程 -> 提交打卡（Hive 本地存储，按教材隔离）。
+/// 天数标识：第X天，每天绑定 2 节课（单数新课 + 双数复习课）。
+/// 勾选/取消任务自动实时保存（防抖 500ms），完成当天全部任务自动跳转下一天。
 class LearningCheckinPage extends StatefulWidget {
   const LearningCheckinPage({super.key});
 
@@ -26,22 +27,25 @@ class LearningCheckinPage extends StatefulWidget {
 
 class _LearningCheckinPageState extends State<LearningCheckinPage> {
   late List<Lesson> _lessons;
-  int _selectedLessonIndex = 0;
+  int _currentDay = 1;
   String _today = '';
 
   // 编辑缓冲
   List<bool> _preview = [];
   List<bool> _formal = [];
   List<bool> _review = [];
-  TextEditingController _imitationCtrl = TextEditingController();
+  final TextEditingController _imitationCtrl = TextEditingController();
   bool _loading = true;
+
+  // 防抖
+  Timer? _debounceTimer;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
     _today = DateUtil.today();
-    _reloadLessons();
-    _loadCheckin();
+    _initDay();
     TextbookService.instance.addListener(_onTextbookNotification);
   }
 
@@ -49,15 +53,25 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
   void dispose() {
     TextbookService.instance.removeListener(_onTextbookNotification);
     _imitationCtrl.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
-  /// 监听教材切换（可能来自其他 Tab），下一帧刷新课程与打卡，避免 build 期间 setState
+  /// 初始化当前天数（从持久化读取，默认第1天）
+  void _initDay() {
+    final tbId = TextbookService.instance.currentId;
+    _currentDay = StorageService.instance.currentDayOf(tbId);
+    _reloadLessons();
+    _loadCheckin();
+  }
+
+  /// 监听教材切换：刷新课程、重置天数、清空状态
   void _onTextbookNotification() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       setState(() {
-        _selectedLessonIndex = 0;
+        _currentDay = StorageService.instance
+            .currentDayOf(TextbookService.instance.currentId);
         _loading = true;
       });
       _reloadLessons();
@@ -66,22 +80,32 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
   }
 
   void _reloadLessons() {
-    _lessons = TextbookRegistry.lessonsOf(TextbookService.instance.currentId);
-    if (_selectedLessonIndex >= _lessons.length) {
-      _selectedLessonIndex = 0;
+    _lessons = TextbookRegistry.lessonsOf(
+        TextbookService.instance.currentId);
+    final totalDays = _totalDays();
+    if (_currentDay > totalDays) {
+      _currentDay = totalDays;
     }
   }
+
+  int _totalDays() {
+    final info = TextbookRegistry.byId(TextbookService.instance.currentId);
+    return info.totalDays;
+  }
+
+  /// 获取当前天的课程列表
+  List<Lesson> get _dayLessons =>
+      _lessons.where((l) => l.dayNumber == _currentDay).toList();
 
   void _loadCheckin() {
     if (_lessons.isEmpty) {
       setState(() => _loading = false);
       return;
     }
-    final lesson = _lessons[_selectedLessonIndex];
     final existing = StorageService.instance.getCheckin(
       TextbookService.instance.currentId,
       _today,
-      lesson.number,
+      _currentDay,
     );
     _preview = existing?.previewTasks ??
         List<bool>.filled(kPreviewTaskLabels.length, false);
@@ -93,33 +117,46 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
     setState(() => _loading = false);
   }
 
-  void _onLessonChanged(int index) {
-    setState(() {
-      _selectedLessonIndex = index;
-      _loading = true;
-    });
-    _loadCheckin();
-  }
-
   Future<void> _onTextbookChanged(String id) async {
     await TextbookService.instance.select(id);
     setState(() {
-      _selectedLessonIndex = 0;
+      _currentDay = StorageService.instance.currentDayOf(id);
       _loading = true;
     });
     _reloadLessons();
     _loadCheckin();
   }
 
-  Future<void> _submit() async {
-    if (_lessons.isEmpty) return;
-    final lesson = _lessons[_selectedLessonIndex];
-    final createdAt = DateUtil.dateTime(DateTime.now());
+  /// 防抖保存：勾选/取消后延迟 500ms 写入
+  void _debouncedSave() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _doSave();
+    });
+  }
 
+  /// 立即保存（用于切换天数/离开页面时）
+  Future<void> _immediateSave() async {
+    _debounceTimer?.cancel();
+    await _doSave();
+  }
+
+  Future<void> _doSave() async {
+    if (_isSaving) return;
+    _isSaving = true;
+
+    final dayLessons = _dayLessons;
+    if (dayLessons.isEmpty) {
+      _isSaving = false;
+      return;
+    }
+
+    final createdAt = DateUtil.dateTime(DateTime.now());
     final checkin = LessonCheckin(
       textbook: TextbookService.instance.currentId,
       date: _today,
-      lessonNumber: lesson.number,
+      dayNumber: _currentDay,
+      lessonNumbers: dayLessons.map((l) => l.number).toList(),
       previewTasks: List<bool>.from(_preview),
       formalTasks: List<bool>.from(_formal),
       reviewTasks: List<bool>.from(_review),
@@ -127,41 +164,95 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
       createdAt: createdAt,
     );
     await StorageService.instance.saveCheckin(checkin);
-    await HapticService.heavy();
 
-    // 检查成就解锁
+    // 同步更新当前教材的学习天数
+    await StorageService.instance.setCurrentDay(
+        TextbookService.instance.currentId, _currentDay);
+
+    // 成就检测
     final unlocked = await AchievementService.instance.checkAndUnlock();
-    if (!mounted) return;
+    if (!mounted) {
+      _isSaving = false;
+      return;
+    }
     if (unlocked.isNotEmpty) {
       for (final def in unlocked) {
-        if (!mounted) return;
+        if (!mounted) break;
         await CelebrationDialog.show(context, def);
       }
-    } else {
+    }
+
+    // 如果当天全部完成，自动跳转下一天
+    if (checkin.isAllDone && _currentDay < _totalDays()) {
+      _jumpToNextDay();
+    }
+
+    _isSaving = false;
+  }
+
+  /// 跳转到下一天
+  void _jumpToNextDay() {
+    HapticService.medium();
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      setState(() {
+        _currentDay += 1;
+        _loading = true;
+      });
+      _loadCheckin();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(checkin.isAllDone ? '✅ 打卡完成，继续加油！' : '📝 已保存进度'),
+          content: Text('🌟 打卡完成，进入第$_currentDay天！'),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: checkin.isAllDone
-              ? const Color(0xFF58CC02)
-              : Theme.of(context).colorScheme.surface,
+          backgroundColor: const Color(0xFF58CC02),
+          duration: const Duration(seconds: 2),
         ),
       );
-    }
+    });
+  }
+
+  void _onDayChanged(int day) {
+    if (day == _currentDay) return;
+    setState(() {
+      _currentDay = day;
+      _loading = true;
+    });
+    _loadCheckin();
+    // 仅持久化当前天数，不触发 _doSave 以避免切换到已完成天时误触自动跳转
+    StorageService.instance.setCurrentDay(
+        TextbookService.instance.currentId, day);
+  }
+
+  void _onTaskToggle(int section, int index, bool value) {
+    setState(() {
+      switch (section) {
+        case 0:
+          _preview[index] = value;
+          break;
+        case 1:
+          _formal[index] = value;
+          break;
+        case 2:
+          _review[index] = value;
+          break;
+      }
+    });
+    _debouncedSave();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textbooks = TextbookRegistry.all
-        .map((t) => CapsuleOption(value: t.id, label: t.name))
+        .map((t) => TextbookDropdownOption(value: t.id, label: t.name))
         .toList();
+    final totalDays = _totalDays();
 
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            // 顶部：教材选择 + 今日日期
+            // 顶部：教材下拉 + 今日日期
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: Column(
@@ -191,8 +282,8 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  CapsuleSelector<String>(
+                  const SizedBox(height: 10),
+                  TextbookDropdown(
                     options: textbooks,
                     value: TextbookService.instance.currentId,
                     onChanged: _onTextbookChanged,
@@ -201,20 +292,19 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
               ),
             ),
 
-            // 课程横向选择
+            // 天数选择
             SizedBox(
-              height: 64,
+              height: 56,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                itemCount: _lessons.length,
+                itemCount: totalDays,
                 separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (_, i) {
-                  final lesson = _lessons[i];
-                  final selected = i == _selectedLessonIndex;
-                  final group = lesson.group;
+                  final day = i + 1;
+                  final selected = day == _currentDay;
                   return GestureDetector(
-                    onTap: () => _onLessonChanged(i),
+                    onTap: () => _onDayChanged(day),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 160),
                       curve: Curves.easeOutBack,
@@ -236,61 +326,15 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Text(
-                                'L${lesson.number}',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  color: selected
-                                      ? Colors.white
-                                      : theme.colorScheme.onSurface,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: lesson.isNew
-                                      ? (selected
-                                          ? Colors.white.withOpacity(0.3)
-                                          : const Color(0xFF1CB0F6)
-                                              .withOpacity(0.15))
-                                      : (selected
-                                          ? Colors.white.withOpacity(0.3)
-                                          : const Color(0xFFFFC800)
-                                              .withOpacity(0.18)),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  lesson.isNew ? '新课' : '复习',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: lesson.isNew
-                                        ? (selected
-                                            ? Colors.white
-                                            : const Color(0xFF1CB0F6))
-                                        : (selected
-                                            ? Colors.white
-                                            : const Color(0xFFE0A800)),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
                           Text(
-                            '第$group组',
+                            '第$day天',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
                               color: selected
-                                  ? Colors.white.withOpacity(0.85)
-                                  : theme.colorScheme.onSurface.withOpacity(0.5),
+                                  ? Colors.white
+                                  : theme.colorScheme.onSurface,
                             ),
                           ),
                         ],
@@ -316,63 +360,106 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
   }
 
   Widget _buildTaskArea(ThemeData theme) {
-    if (_lessons.isEmpty) {
+    final dayLessons = _dayLessons;
+    if (dayLessons.isEmpty) {
       return const Center(child: Text('暂无课程数据'));
     }
-    final lesson = _lessons[_selectedLessonIndex];
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 100),
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 40),
       children: [
-        // 课程标题卡
+        // 天数标题卡
         LiquidGlassCard(
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: lesson.isNew
-                      ? const Color(0xFF1CB0F6).withOpacity(0.15)
-                      : const Color(0xFFFFC800).withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  '${lesson.number}',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: lesson.isNew
-                        ? const Color(0xFF1CB0F6)
-                        : const Color(0xFFE0A800),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      lesson.title,
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '$_currentDay',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 20,
                         fontWeight: FontWeight.w800,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${TextbookService.instance.current.name} · 第${lesson.group}组 · ${lesson.isNew ? "新课" : "复习课"}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: theme.colorScheme.onSurface.withOpacity(0.55),
+                        color: theme.colorScheme.primary,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '第$_currentDay天',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${TextbookService.instance.current.name} · ${dayLessons.map((l) => 'L${l.number}（${l.isNew ? "新课" : "复习"}）').join(' + ')}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color:
+                                theme.colorScheme.onSurface.withOpacity(0.55),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
+              // 课程标题列表
+              const SizedBox(height: 12),
+              ...dayLessons.map((l) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: l.isNew
+                                ? const Color(0xFF1CB0F6).withOpacity(0.15)
+                                : const Color(0xFFFFC800).withOpacity(0.18),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'L${l.number} · ${l.isNew ? "新课" : "复习"}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: l.isNew
+                                  ? const Color(0xFF1CB0F6)
+                                  : const Color(0xFFE0A800),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            l.title,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color:
+                                  theme.colorScheme.onSurface.withOpacity(0.7),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
             ],
           ),
         ),
@@ -384,7 +471,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
           title: '预习任务',
           labels: kPreviewTaskLabels,
           states: _preview,
-          onToggle: (i, v) => setState(() => _preview[i] = v),
+          section: 0,
         ),
 
         // 正式学习
@@ -394,7 +481,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
           title: '正式学习',
           labels: kFormalTaskLabels,
           states: _formal,
-          onToggle: (i, v) => setState(() => _formal[i] = v),
+          section: 1,
           extra: Padding(
             padding: const EdgeInsets.only(top: 8, left: 4, right: 4),
             child: TextField(
@@ -404,6 +491,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                 hintText: '✍️ 在此仿写本课句型句子…',
                 contentPadding: EdgeInsets.all(14),
               ),
+              onChanged: (_) => _debouncedSave(),
             ),
           ),
         ),
@@ -415,16 +503,18 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
           title: '复习任务',
           labels: kReviewTaskLabels,
           states: _review,
-          onToggle: (i, v) => setState(() => _review[i] = v),
+          section: 2,
         ),
 
         const SizedBox(height: 8),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: DuolingoButton(
-            label: '提交打卡',
-            icon: Icons.check_circle_outline,
-            onPressed: _submit,
+        // 保存提示
+        Center(
+          child: Text(
+            _isSaving ? '保存中…' : '✓ 自动保存',
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.colorScheme.onSurface.withOpacity(0.4),
+            ),
           ),
         ),
       ],
@@ -437,7 +527,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
     required String title,
     required List<String> labels,
     required List<bool> states,
-    required void Function(int, bool) onToggle,
+    required int section,
     Widget? extra,
   }) {
     final doneCount = states.where((e) => e).length;
@@ -484,7 +574,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
             TaskCheckbox(
               label: labels[i],
               value: states[i],
-              onChanged: (v) => onToggle(i, v),
+              onChanged: (v) => _onTaskToggle(section, i, v),
             ),
           if (extra != null) extra,
         ],

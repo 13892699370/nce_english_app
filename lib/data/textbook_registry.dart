@@ -41,6 +41,9 @@ class TextbookInfo {
   });
 
   int get lessonCount => lessonTitles.length;
+
+  /// 总天数（每2节课=1天）
+  int get totalDays => (lessonCount / 2).ceil();
 }
 
 /// 教材注册表
@@ -78,23 +81,59 @@ class TextbookRegistry {
     );
   }
 
-  /// 构建课程列表：1 组 = 单数新课 + 双数复习课
+  /// 构建课程列表：1 天 = 2 节课 = 单数新课 + 双数复习课
   static List<Lesson> lessonsOf(String textbookId) {
     final info = byId(textbookId);
     final List<Lesson> lessons = [];
     for (var i = 0; i < info.lessonTitles.length; i++) {
       final number = i + 1;
-      final group = (number / 2).ceil(); // 1,1,2,2,3,3...
+      final dayNumber = (number / 2).ceil();
       final type = number.isOdd ? 'new' : 'review';
       lessons.add(Lesson(
         number: number,
         title: info.lessonTitles[i],
         type: type,
-        group: group,
+        group: dayNumber,
+        dayNumber: dayNumber,
       ));
     }
     return lessons;
   }
 
+  /// 获取指定天的课程列表（如第1天 -> [L1, L2]）
+  static List<Lesson> lessonsOfDay(String textbookId, int dayNumber) {
+    final lessons = lessonsOf(textbookId);
+    return lessons.where((l) => l.dayNumber == dayNumber).toList();
+  }
+
+  /// 获取指定天的所有课程号（如第1天 -> [1, 2]）
+  static List<int> lessonNumbersOfDay(String textbookId, int dayNumber) {
+    return lessonsOfDay(textbookId, dayNumber)
+        .map((l) => l.number)
+        .toList();
+  }
+
+  /// 获取指定天的单词列表
+  static List<VocabWord> vocabOfDay(String textbookId, int dayNumber) {
+    final info = byId(textbookId);
+    return info.vocab.where((v) => v.dayNumber == dayNumber).toList();
+  }
+
   static List<VocabWord> vocabOf(String textbookId) => byId(textbookId).vocab;
+
+  /// 更新词库中每个单词的 dayNumber 字段
+  /// 因为词库数据可能未设置 dayNumber，这里按 lessonNumber 自动推算
+  static List<VocabWord> vocabWithDayNumber(String textbookId) {
+    final info = byId(textbookId);
+    return info.vocab.map((v) {
+      final day = (v.lessonNumber / 2).ceil();
+      return VocabWord(
+        word: v.word,
+        phonetic: v.phonetic,
+        meaning: v.meaning,
+        lessonNumber: v.lessonNumber,
+        dayNumber: day,
+      );
+    }).toList();
+  }
 }

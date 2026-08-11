@@ -124,10 +124,12 @@ class AchievementEvaluator {
     int totalLessons,
     List<LessonCheckin> allCheckins,
   ) {
-    final done = allCheckins
-        .where((c) => c.textbook == textbookId && c.isAllDone)
-        .map((c) => c.lessonNumber)
-        .toSet();
+    final done = <int>{};
+    for (final c in allCheckins) {
+      if (c.textbook == textbookId && c.isAllDone) {
+        done.addAll(c.lessonNumbers);
+      }
+    }
     return done.length >= totalLessons;
   }
 

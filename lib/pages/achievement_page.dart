@@ -292,12 +292,13 @@ class _AchievementPageState extends State<AchievementPage> {
       case 'textbook':
         final tbId = def.textbookId!;
         final total = TextbookRegistry.lessonsOf(tbId).length;
-        final done = all
-            .where((c) => c.textbook == tbId && c.isAllDone)
-            .map((c) => c.lessonNumber)
-            .toSet()
-            .length;
-        return (done, total);
+        final done = <int>{};
+        for (final c in all) {
+          if (c.textbook == tbId && c.isAllDone) {
+            done.addAll(c.lessonNumbers);
+          }
+        }
+        return (done.length, total);
       default:
         return null;
     }

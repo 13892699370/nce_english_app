@@ -8,13 +8,12 @@ import '../services/haptic_service.dart';
 import '../utils/date_util.dart';
 import '../widgets/liquid_glass_card.dart';
 import '../widgets/duolingo_button.dart';
-import '../widgets/capsule_selector.dart';
+import '../widgets/textbook_dropdown.dart';
 
 /// 单词学习页（仿百词斩）
 ///
-/// 根据当前选中教材自动加载对应词库；液态玻璃单词大卡片，
-/// 展示英文、音标、中文释义；底部大号 认识/不认识 按钮，
-/// 复刻多邻国按压动效，双端表现一致。
+/// 根据当前选中教材自动加载对应词库；支持按天筛选单词。
+/// 液态玻璃单词大卡片，展示英文、音标、中文释义。
 class WordLearningPage extends StatefulWidget {
   const WordLearningPage({super.key});
 
@@ -27,11 +26,13 @@ class _WordLearningPageState extends State<WordLearningPage> {
   int _index = 0;
   bool _revealed = false;
   bool _loading = true;
+  int _currentDay = 1;
+  bool _showDayFilter = false;
 
   @override
   void initState() {
     super.initState();
-    _reloadVocab();
+    _initDayAndLoad();
     TextbookService.instance.addListener(_onTextbookNotification);
   }
 
@@ -41,18 +42,36 @@ class _WordLearningPageState extends State<WordLearningPage> {
     super.dispose();
   }
 
-  /// 监听教材切换（可能来自其他 Tab），下一帧刷新词库，避免 build 期间 setState
+  void _initDayAndLoad() {
+    final tbId = TextbookService.instance.currentId;
+    _currentDay = StorageService.instance.currentDayOf(tbId);
+    _showDayFilter = true; // 默认开启按天筛选，跟随打卡页当前天数
+    _reloadVocab();
+  }
+
   void _onTextbookNotification() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      setState(() => _loading = true);
+      setState(() {
+        _currentDay =
+            StorageService.instance.currentDayOf(TextbookService.instance.currentId);
+        _loading = true;
+      });
       _reloadVocab();
     });
   }
 
   void _reloadVocab() {
     final tbId = TextbookService.instance.currentId;
-    _vocab = TextbookRegistry.vocabOf(tbId);
+    final allVocab = TextbookRegistry.vocabWithDayNumber(tbId);
+
+    // 按天筛选或显示全部
+    if (_showDayFilter) {
+      _vocab = allVocab.where((v) => v.dayNumber == _currentDay).toList();
+    } else {
+      _vocab = List.from(allVocab);
+    }
+
     // 排序：待复习优先，其次未学习，最后按课程号
     _vocab.sort((a, b) {
       final pa = StorageService.instance.getWord(tbId, a.word);
@@ -94,13 +113,23 @@ class _WordLearningPageState extends State<WordLearningPage> {
           .where((w) => w.inNotebook)
           .length;
 
+  int get _totalDays {
+    final info = TextbookRegistry.byId(TextbookService.instance.currentId);
+    return info.totalDays;
+  }
+
   Future<void> _onTextbookChanged(String id) async {
     await TextbookService.instance.select(id);
-    setState(() => _loading = true);
+    setState(() {
+      _currentDay = StorageService.instance.currentDayOf(id);
+      _showDayFilter = true; // 切换教材默认开启按天筛选
+      _loading = true;
+    });
     _reloadVocab();
   }
 
   Future<void> _answer(bool known) async {
+    if (_vocab.isEmpty || _index >= _vocab.length) return;
     final tbId = TextbookService.instance.currentId;
     final today = DateUtil.today();
     final existing = StorageService.instance.getWord(tbId, _current.word);
@@ -108,13 +137,11 @@ class _WordLearningPageState extends State<WordLearningPage> {
         WordProgress(word: _current.word, textbook: tbId);
 
     if (known) {
-      // 认识：提升熟悉度，降低复习优先级
       progress.familiarity = (progress.familiarity + 1).clamp(0, 5);
       progress.learned = true;
       progress.inNotebook = false;
       await HapticService.light();
     } else {
-      // 不认识：加入生词本与复习队列
       progress.familiarity = 0;
       progress.learned = true;
       progress.inNotebook = true;
@@ -129,7 +156,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
         _index += 1;
         _revealed = false;
       } else {
-        _index = _vocab.length; // 完成
+        _index = _vocab.length;
       }
     });
   }
@@ -138,7 +165,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textbooks = TextbookRegistry.all
-        .map((t) => CapsuleOption(value: t.id, label: t.name))
+        .map((t) => TextbookDropdownOption(value: t.id, label: t.name))
         .toList();
 
     return Scaffold(
@@ -186,13 +213,13 @@ class _WordLearningPageState extends State<WordLearningPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  CapsuleSelector<String>(
+                  const SizedBox(height: 10),
+                  TextbookDropdown(
                     options: textbooks,
                     value: TextbookService.instance.currentId,
                     onChanged: _onTextbookChanged,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   // 统计卡
                   Row(
                     children: [
@@ -224,23 +251,118 @@ class _WordLearningPageState extends State<WordLearningPage> {
                       ),
                     ],
                   ),
+                  // 按天筛选
+                  const SizedBox(height: 8),
+                  _buildDayFilter(theme),
                 ],
               ),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
 
             // 单词卡 + 按钮
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
-                  : _index >= _vocab.length
-                      ? _buildComplete(theme)
-                      : _buildWordCard(theme),
+                  : _vocab.isEmpty
+                      ? _buildEmpty(theme)
+                      : _index >= _vocab.length
+                          ? _buildComplete(theme)
+                          : _buildWordCard(theme),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDayFilter(ThemeData theme) {
+    return Row(
+      children: [
+        Expanded(
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _showDayFilter = !_showDayFilter;
+                _reloadVocab();
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: _showDayFilter
+                    ? theme.colorScheme.primary.withOpacity(0.12)
+                    : theme.colorScheme.surface.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _showDayFilter
+                      ? theme.colorScheme.primary.withOpacity(0.3)
+                      : theme.colorScheme.outline.withOpacity(0.15),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    _showDayFilter ? Icons.filter_alt : Icons.filter_alt_outlined,
+                    size: 16,
+                    color: _showDayFilter
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _showDayFilter ? '第$_currentDay天 · L${_currentDay * 2 - 1}-L${_currentDay * 2}' : '全部单词',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: _showDayFilter
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (_showDayFilter) ...[
+          const SizedBox(width: 8),
+          Expanded(
+            child: DropdownButtonFormField<int>(
+              value: _currentDay,
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: theme.colorScheme.surface.withOpacity(0.5),
+              ),
+              items: List.generate(_totalDays, (i) {
+                final day = i + 1;
+                return DropdownMenuItem(
+                  value: day,
+                  child: Text('第$day天', style: const TextStyle(fontSize: 13)),
+                );
+              }),
+              onChanged: (v) {
+                if (v != null) {
+                  setState(() {
+                    _currentDay = v;
+                    _loading = true;
+                  });
+                  _reloadVocab();
+                  StorageService.instance
+                      .setCurrentDay(TextbookService.instance.currentId, v);
+                }
+              },
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -318,7 +440,6 @@ class _WordLearningPageState extends State<WordLearningPage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // 进度环
                         if (progress != null) ...[
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -407,7 +528,6 @@ class _WordLearningPageState extends State<WordLearningPage> {
             ),
           ),
         ),
-        // 进度
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(
@@ -438,7 +558,6 @@ class _WordLearningPageState extends State<WordLearningPage> {
           ),
         ),
         const SizedBox(height: 12),
-        // 按钮
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           child: Row(
@@ -479,7 +598,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
             const Text('🎉', style: TextStyle(fontSize: 56)),
             const SizedBox(height: 12),
             Text(
-              '今日单词已学完！',
+              _showDayFilter ? '第$_currentDay天单词已学完！' : '今日单词已学完！',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
@@ -507,6 +626,35 @@ class _WordLearningPageState extends State<WordLearningPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmpty(ThemeData theme) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('📭', style: TextStyle(fontSize: 48)),
+          const SizedBox(height: 16),
+          Text(
+            _showDayFilter ? '第$_currentDay天暂无单词数据' : '暂无单词数据',
+            style: TextStyle(
+              fontSize: 16,
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          const SizedBox(height: 12),
+          DuolingoButton(
+            label: '查看全部单词',
+            onPressed: () {
+              setState(() {
+                _showDayFilter = false;
+                _reloadVocab();
+              });
+            },
+          ),
+        ],
       ),
     );
   }
@@ -552,7 +700,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
                 child: words.isEmpty
                     ? Center(
                         child: Text(
-                          '还没有生词\n点“不认识”即可加入',
+                          '还没有生词\n点"不认识"即可加入',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: theme.colorScheme.onSurface.withOpacity(0.4),

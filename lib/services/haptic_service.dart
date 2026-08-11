@@ -26,6 +26,15 @@ class HapticService {
     }
   }
 
+  /// 中等反馈（跳转、完成等）
+  static Future<void> medium() async {
+    try {
+      await HapticFeedback.mediumImpact();
+    } on Exception {
+      // 降级
+    }
+  }
+
   /// 重度反馈（成就解锁、完成提交）
   static Future<void> heavy() async {
     try {

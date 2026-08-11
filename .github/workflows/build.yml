@@ -1,0 +1,74 @@
+name: Build APK & IPA
+
+# 云端 macOS runner 构建双端安装包：
+#   - iOS: 未签名 IPA（build/Runner_unsigned.ipa），用 Sideloadly/AltStore/TrollStore 自签
+#   - Android: release APK，debug 签名（可直接安装）
+#
+# 触发：推送到 main 分支，或在 GitHub Actions 页面手动 Run workflow
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter doctor
+        run: flutter --version
+
+      # 仓库只含 lib/ + pubspec + 关键 manifest；云端补齐 iOS/Android 平台脚手架
+      # flutter create 不会覆盖已存在文件（保留 AndroidManifest 的 VIBRATE 权限与 Info.plist）
+      - name: Scaffold platforms
+        run: flutter create . --platforms=ios,android,web --org com.nce.checkin --project-name nce_checkin
+
+      - name: Pull deps
+        run: flutter pub get
+
+      # ---------------- iOS 未签名 IPA ----------------
+      - name: Build unsigned iOS app
+        run: flutter build ios --release --no-codesign
+
+      - name: Package unsigned IPA
+        run: |
+          rm -rf build/Payload
+          mkdir -p build/Payload
+          cp -R build/ios/iphoneos/Runner.app build/Payload/
+          cd build
+          zip -qr Runner_unsigned.ipa Payload
+          ls -lh Runner_unsigned.ipa
+
+      - name: Upload iOS IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-unsigned-ipa
+          path: build/Runner_unsigned.ipa
+          retention-days: 30
+
+      # ---------------- Android APK ----------------
+      - name: Build Android APK
+        run: flutter build apk --release
+
+      - name: Upload Android APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: build/app/outputs/flutter-apk/*.apk
+          retention-days: 30

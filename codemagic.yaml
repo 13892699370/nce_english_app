@@ -1,0 +1,106 @@
+# Codemagic CI 配置：一套代码，云端 Mac 机器同时输出 Android-APK 与 iOS-IPA
+#
+# 使用前请在 Codemagic 控制台为当前应用配置以下环境变量（Secrets / Teams）：
+#   Android 签名（如需正式签名，否则将用 debug 签名也可安装）：
+#     - CM_KEYSTORE           (base64 编码的 .keystore 文件内容，可选)
+#     - CM_KEYSTORE_PASSWORD  (可选)
+#     - CM_KEY_ALIAS          (可选)
+#     - CM_KEY_PASSWORD       (可选)
+#   通用：
+#     - EMAIL                 (构建结果通知邮箱，可选)
+#     - FLUTTER_VERSION       (如 stable 或具体版本号，可选)
+#
+# iOS 构建策略：生成「未签名 IPA」，无需 Apple Developer 账号。
+#   产物 build/Runner_unsigned.ipa 可用 Sideloadly / AltStore / TrollStore 等
+#   自签工具用你的 Apple ID 重签后安装到手机。
+#
+# 说明：iOS 不在 Windows 本地编译，全部依赖 Codemagic 云端 Mac 构建。
+#       Windows 本地仅运行 Android / Web 预览。
+
+workflows:
+  android-workflow:
+    name: Android APK
+    max_build_duration: 30
+    environment:
+      groups:
+        - android
+      vars:
+        PACKAGE_NAME: "com.nce.checkin"
+      flutter: stable
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+        - pattern: develop
+          include: true
+    scripts:
+      - name: Flutter version
+        script: flutter --version
+      - name: Pull deps
+        script: flutter pub get
+      - name: Build APK
+        script: |
+          # 若配置了正式签名变量则使用，否则用 debug 签名（同样可安装）
+          if [ -n "$CM_KEYSTORE" ]; then
+            echo "$CM_KEYSTORE" | base64 --decode > /tmp/keystore.jks
+            cat >> android/key.properties <<EOF
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyPassword=$CM_KEY_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          storeFile=/tmp/keystore.jks
+          EOF
+          fi
+          flutter build apk --release
+    artifacts:
+      - build/**/outputs/**/*.apk
+    publishing:
+      email:
+        recipients:
+          - $EMAIL
+
+  ios-workflow:
+    name: iOS IPA (unsigned, self-sign)
+    max_build_duration: 40
+    environment:
+      vars:
+        BUNDLE_ID: "com.nce.checkin"
+        XCODE_WORKSPACE: "Runner.xcworkspace"
+        XCODE_SCHEME: "Runner"
+      flutter: stable
+      xcode: latest
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+    scripts:
+      - name: Flutter version
+        script: flutter --version
+      - name: Pull deps
+        script: flutter pub get
+      - name: Set up Pods
+        script: |
+          find . -name "Podfile" -exec pod install \;
+      - name: Build unsigned iOS app
+        script: |
+          # 无签名构建：产出未签名 .app，供手机自签工具重签
+          flutter build ios --release --no-codesign
+      - name: Package unsigned IPA (Payload structure)
+        script: |
+          # 将 .app 打包为标准 IPA 目录结构，自签工具可直接加载
+          rm -rf build/Payload
+          mkdir -p build/Payload
+          cp -R build/ios/iphoneos/Runner.app build/Payload/
+          cd build
+          zip -qr Runner_unsigned.ipa Payload
+          echo "✅ 已生成未签名 IPA：build/Runner_unsigned.ipa"
+          echo "使用 Sideloadly / AltStore / TrollStore 等工具用你的 Apple ID 自签后安装。"
+    artifacts:
+      - build/Runner_unsigned.ipa
+    publishing:
+      email:
+        recipients:
+          - $EMAIL

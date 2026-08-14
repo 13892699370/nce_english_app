@@ -1,4 +1,7 @@
+import 'dart:io' show Platform;
+import 'dart:math' as math;
 import 'dart:ui';
+import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
@@ -7,7 +10,9 @@ import 'word_learning_page.dart';
 import 'achievement_page.dart';
 import 'calendar_page.dart';
 
-/// 主框架：Lumina Mono 悬浮胶囊底部导航 + 全局 Liquid Glass 渐变背景
+final _kIsLowEndGlass = Platform.numberOfProcessors < 4;
+
+/// 主框架：iOS 18 风格 Liquid Glass 胶囊底部导航 + 色斑渐变背景
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -40,10 +45,10 @@ class _HomePageState extends State<HomePage> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // —— 底层：Liquid Glass 效果必需的渐变与色斑背景 ——
+        // —— 底层：Liquid Glass 效果必需的色斑渐变背景 ——
         const Positioned.fill(child: _LiquidGlassBackground()),
 
-        // —— 中层：页面内容。包一层透明背景避免各页面自己的 scaffold 底色覆盖背景 ——
+        // —— 中层：页面内容（强制透明让色斑透上来） ——
         Positioned.fill(
           child: _TransparentPages(
             index: _index,
@@ -51,7 +56,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
 
-        // —— 顶层：Glass 风格的底部导航栏 ——
+        // —— 顶层：iOS 18 Glass 风格的底部导航栏 ——
         Positioned(
           left: 18,
           right: 18,
@@ -71,11 +76,9 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-/// Liquid Glass 风格的全局背景：
-/// 1) 大面积柔和渐变打底
-/// 2) 3~4 个巨大、虚边、低饱和的色斑（Blob）
-/// 3) 色斑上方再叠一层极微的颗粒噪声（可选）
-/// 这是苹果 Control Center / Wallpaper Style 经典做法。
+/// Liquid Glass 2.0 背景（iOS 18）：
+/// 色斑更大、更饱和、sigma 100 级超柔边。
+/// 没有这层背景的话玻璃的 blur+saturation 没有任何效果。
 class _LiquidGlassBackground extends StatelessWidget {
   const _LiquidGlassBackground();
 
@@ -87,59 +90,72 @@ class _LiquidGlassBackground extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // 1) 3 个巨大的色斑，随机位置 + 巨大 blur
+          // —— 1) 巨大色斑：尺寸 +30%、透明度 +30%、sigma 100 ——
           Positioned(
-            top: -80,
-            left: -60,
-            child: _blob(
-              size: 320,
-              color: isDark
-                  ? AppTheme.kLuminaLime.withOpacity(0.10)
-                  : AppTheme.kLuminaLime.withOpacity(0.32),
-            ),
-          ),
-          Positioned(
-            top: 180,
-            right: -100,
-            child: _blob(
-              size: 340,
-              color: isDark
-                  ? const Color(0xFF527AFF).withOpacity(0.18)
-                  : const Color(0xFF527AFF).withOpacity(0.22),
-            ),
-          ),
-          Positioned(
-            bottom: 40,
+            top: -120,
             left: -80,
             child: _blob(
-              size: 360,
+              size: 440,
               color: isDark
-                  ? const Color(0xFFFF9500).withOpacity(0.10)
-                  : const Color(0xFFFF9500).withOpacity(0.18),
+                  ? AppTheme.kLuminaLime.withOpacity(0.14)
+                  : AppTheme.kLuminaLime.withOpacity(0.40),
+              sigma: 100,
+            ),
+          ),
+          Positioned(
+            top: 160,
+            right: -150,
+            child: _blob(
+              size: 480,
+              color: isDark
+                  ? const Color(0xFF527AFF).withOpacity(0.20)
+                  : const Color(0xFF527AFF).withOpacity(0.28),
+              sigma: 100,
+            ),
+          ),
+          Positioned(
+            bottom: -20,
+            left: -120,
+            child: _blob(
+              size: 500,
+              color: isDark
+                  ? const Color(0xFFFF6B6B).withOpacity(0.12)
+                  : const Color(0xFFFF8A3C).withOpacity(0.22),
+              sigma: 100,
             ),
           ),
           if (isDark)
             Positioned(
-              bottom: 280,
-              right: -40,
+              top: 420,
+              left: 120,
               child: _blob(
-                size: 260,
-                color: AppTheme.kLuminaLime.withOpacity(0.06),
+                size: 320,
+                color: const Color(0xFFBF5AF2).withOpacity(0.13),
+                sigma: 90,
               ),
             ),
-
-          // 2) 浅色模式再叠一层更淡的紫斑，增加层次
           if (!isDark)
             Positioned(
-              top: 440,
-              right: 20,
+              top: 420,
+              right: -40,
               child: _blob(
-                size: 220,
-                color: const Color(0xFF527AFF).withOpacity(0.10),
+                size: 300,
+                color: const Color(0xFFBF5AF2).withOpacity(0.14),
+                sigma: 90,
+              ),
+            ),
+          if (isDark)
+            Positioned(
+              bottom: 220,
+              right: -20,
+              child: _blob(
+                size: 280,
+                color: AppTheme.kLuminaLime.withOpacity(0.08),
+                sigma: 80,
               ),
             ),
 
-          // 3) 垂直微渐变：上部更亮，下部稍沉
+          // —— 2) 垂直微渐变 ——
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -149,13 +165,23 @@ class _LiquidGlassBackground extends StatelessWidget {
                   colors: isDark
                       ? [
                           Colors.transparent,
-                          const Color(0xFF000000).withOpacity(0.22),
+                          const Color(0xFF000000).withOpacity(0.28),
                         ]
                       : [
                           const Color(0xFFFFFFFF).withOpacity(0.0),
-                          const Color(0xFFEFEFF3).withOpacity(0.38),
+                          const Color(0xFFE7E7F0).withOpacity(0.42),
                         ],
                 ),
+              ),
+            ),
+          ),
+
+          // —— 3) 轻微噪声（极低透明度，消除色带） ——
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Opacity(
+                opacity: isDark ? 0.025 : 0.018,
+                child: const _BackdropNoise(),
               ),
             ),
           ),
@@ -164,10 +190,14 @@ class _LiquidGlassBackground extends StatelessWidget {
     );
   }
 
-  Widget _blob({required double size, required Color color}) {
+  Widget _blob({
+    required double size,
+    required Color color,
+    required double sigma,
+  }) {
     return ClipOval(
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+        filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma, tileMode: TileMode.decal),
         child: Container(
           width: size,
           height: size,
@@ -176,6 +206,75 @@ class _LiquidGlassBackground extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 背景用的噪声瓦片（与卡片共享实现但不需要那么多像素）
+class _BackdropNoise extends StatefulWidget {
+  const _BackdropNoise();
+
+  @override
+  State<_BackdropNoise> createState() => _BackdropNoiseState();
+}
+
+class _BackdropNoiseState extends State<_BackdropNoise> {
+  Image? _image;
+
+  @override
+  void initState() {
+    super.initState();
+    _build();
+  }
+
+  Future<void> _build() async {
+    const w = 128, h = 128;
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder);
+    final rnd = math.Random(0xBEEF);
+    for (int y = 0; y < h; y++) {
+      for (int x = 0; x < w; x++) {
+        final v = rnd.nextInt(256);
+        canvas.drawRect(
+          Rect.fromLTWH(x.toDouble(), y.toDouble(), 1, 1),
+          Paint()..color = Color.fromARGB(255, v, v, v),
+        );
+      }
+    }
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(w, h);
+    if (mounted) setState(() => _image = img);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final img = _image;
+    if (img == null) return const SizedBox.expand();
+    return CustomPaint(painter: _BackdropNoisePainter(img));
+  }
+}
+
+class _BackdropNoisePainter extends CustomPainter {
+  final Image image;
+  _BackdropNoisePainter(this.image);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const tile = 128.0;
+    final paint = Paint()..isAntiAlias = false;
+    for (double y = 0; y < size.height; y += tile) {
+      for (double x = 0; x < size.width; x += tile) {
+        canvas.drawImageRect(
+          image,
+          Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+          Rect.fromLTWH(x, y, tile, tile),
+          paint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _BackdropNoisePainter oldDelegate) =>
+      oldDelegate.image != image;
 }
 
 /// 包裹所有页面，强制透明背景让底层色斑透上来
@@ -187,7 +286,6 @@ class _TransparentPages extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 把 MaterialApp 的 scaffold background 强制覆盖为完全透明
     return Theme(
       data: Theme.of(context).copyWith(
         scaffoldBackgroundColor: Colors.transparent,
@@ -202,7 +300,18 @@ class _TransparentPages extends StatelessWidget {
   }
 }
 
-/// Glass 风格底部导航栏：使用 GlassSurface 渲染逻辑（同卡片一致）
+// —— iOS 18 saturation matrix helper ——
+List<double> _satMatrix(double sat) {
+  const r = 0.213, g = 0.715, b = 0.072;
+  return [
+    r * (1 - sat) + sat, g * (1 - sat), b * (1 - sat), 0, 0,
+    r * (1 - sat), g * (1 - sat) + sat, b * (1 - sat), 0, 0,
+    r * (1 - sat), g * (1 - sat), b * (1 - sat) + sat, 0, 0,
+    0, 0, 0, 1, 0,
+  ];
+}
+
+/// Glass 风格底部导航栏：严格对齐 LiquidGlassCard 的 10 层结构
 class _GlassBottomBar extends StatelessWidget {
   final bool isDark;
   final List<_NavItem> items;
@@ -218,47 +327,54 @@ class _GlassBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final blur = 40.0;
-    final radius = 999.0;
+    const blur = 50.0;
+    const radius = 999.0;
     final innerBorder =
-        isDark ? Colors.white.withOpacity(0.18) : Colors.white.withOpacity(0.80);
+        isDark ? Colors.white.withOpacity(0.24) : Colors.white.withOpacity(0.86);
     final outerBorder = isDark
-        ? Colors.white.withOpacity(0.06)
-        : const Color(0xFF000000).withOpacity(0.06);
+        ? Colors.white.withOpacity(0.05)
+        : const Color(0xFF000000).withOpacity(0.04);
     final glassBase = isDark
-        ? const Color(0xFF1B1B1B).withOpacity(0.55)
-        : const Color(0xFFFFFFFF).withOpacity(0.52);
+        ? const Color(0xFF1B1B1B).withOpacity(0.40)
+        : const Color(0xFFFFFFFF).withOpacity(0.32);
+    final glassTint1 = isDark
+        ? AppTheme.kLuminaLime.withOpacity(0.04)
+        : Colors.white.withOpacity(0.22);
+    final glassTint2 = isDark
+        ? const Color(0xFF000000).withOpacity(0.28)
+        : const Color(0xFFE4E4EA).withOpacity(0.20);
     final activeColor =
         isDark ? AppTheme.kLuminaLime : AppTheme.kLuminaBlack;
     final muted = isDark ? AppTheme.kLuminaMutedDark : AppTheme.kLuminaMuted;
+    final tint = isDark ? AppTheme.kLuminaLime : const Color(0xFF527AFF);
 
     final shadows = isDark
         ? [
             BoxShadow(
-              color: Colors.black.withOpacity(0.42),
-              blurRadius: 32,
+              color: Colors.black.withOpacity(0.52),
+              blurRadius: 44,
               spreadRadius: -6,
-              offset: const Offset(0, 14),
+              offset: const Offset(0, 18),
             ),
             BoxShadow(
-              color: Colors.black.withOpacity(0.18),
-              blurRadius: 10,
+              color: tint.withOpacity(0.11),
+              blurRadius: 18,
               spreadRadius: -2,
-              offset: const Offset(0, 5),
+              offset: const Offset(0, 8),
             ),
           ]
         : [
             BoxShadow(
-              color: const Color(0xFF3A3A4A).withOpacity(0.18),
-              blurRadius: 36,
+              color: const Color(0xFF3A3A4A).withOpacity(0.22),
+              blurRadius: 46,
               spreadRadius: -8,
-              offset: const Offset(0, 14),
+              offset: const Offset(0, 18),
             ),
             BoxShadow(
-              color: const Color(0xFF3A3A4A).withOpacity(0.08),
-              blurRadius: 12,
-              spreadRadius: -2,
-              offset: const Offset(0, 5),
+              color: tint.withOpacity(0.13),
+              blurRadius: 18,
+              spreadRadius: -4,
+              offset: const Offset(0, 8),
             ),
           ];
 
@@ -276,16 +392,34 @@ class _GlassBottomBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(radius),
         child: Stack(
           children: [
-            // Blur
+            // 1) blur + saturation boost
             Positioned.fill(
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-                child: const SizedBox.expand(),
+                filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur, tileMode: TileMode.decal),
+                child: ColorFiltered(
+                  colorFilter: ColorFilter.matrix(_satMatrix(1.6)),
+                  child: const SizedBox.expand(),
+                ),
               ),
             ),
-            // Base
-            Positioned.fill(child: ColoredBox(color: glassBase)),
-            // Inner border
+            // 2) base + 三段渐变
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color.alphaBlend(glassTint1, glassBase),
+                      glassBase,
+                      Color.alphaBlend(glassTint2, glassBase),
+                    ],
+                    stops: const [0.0, 0.55, 1.0],
+                  ),
+                ),
+              ),
+            ),
+            // 3) inner border
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
@@ -298,31 +432,91 @@ class _GlassBottomBar extends StatelessWidget {
                 ),
               ),
             ),
-            // Top highlight
+            // 4) sharp top highlight (iOS 18: 锐利窄边)
             Positioned(
               top: 0,
               left: 0,
               right: 0,
               child: ClipRRect(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(radius)),
+                borderRadius: BorderRadius.vertical(top: const Radius.circular(radius)),
                 child: SizedBox(
-                  height: 48,
+                  height: 22,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.white.withOpacity(isDark ? 0.14 : 0.55),
+                          Colors.white.withOpacity(isDark ? 0.50 : 0.90),
+                          Colors.white.withOpacity(isDark ? 0.10 : 0.36),
                           Colors.white.withOpacity(0.0),
                         ],
+                        stops: const [0.0, 0.32, 1.0],
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-            // Content
+            // 5) Edge rim —— 左上亮边 / 右下暗影
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _NavEdgeRimPainter(isDark: isDark),
+                ),
+              ),
+            ),
+            // 6) 对角线微光
+            Positioned.fill(
+              child: IgnorePointer(
+                child: ShaderMask(
+                  shaderCallback: (bounds) => LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.white.withOpacity(isDark ? 0.05 : 0.16),
+                      Colors.white.withOpacity(0.0),
+                      Colors.white.withOpacity(0.0),
+                      Colors.black.withOpacity(isDark ? 0.16 : 0.035),
+                    ],
+                    stops: const [0.0, 0.40, 0.75, 1.0],
+                  ).createShader(bounds),
+                  blendMode: BlendMode.srcOver,
+                  child: const SizedBox.expand(),
+                ),
+              ),
+            ),
+            // 7) 底部吸光
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 36,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      (isDark ? Colors.black : const Color(0xFF3A3A4A))
+                          .withOpacity(isDark ? 0.30 : 0.08),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // 8) Noise overlay
+            if (!_kIsLowEndGlass)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Opacity(
+                    opacity: isDark ? 0.05 : 0.035,
+                    child: const _NavNoiseTile(),
+                  ),
+                ),
+              ),
+            // 9) Content
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
@@ -366,9 +560,7 @@ class _GlassBottomBar extends StatelessWidget {
                               width: selected ? 6 : 0,
                               height: selected ? 6 : 0,
                               decoration: BoxDecoration(
-                                color: isDark
-                                    ? AppTheme.kLuminaLime
-                                    : AppTheme.kLuminaLime,
+                                color: AppTheme.kLuminaLime,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -393,4 +585,111 @@ class _NavItem {
   final IconData activeIcon;
 
   const _NavItem(this.label, this.icon, this.activeIcon);
+}
+
+class _NavEdgeRimPainter extends CustomPainter {
+  final bool isDark;
+  _NavEdgeRimPainter({required this.isDark});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rrect = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      Radius.circular(999),
+    );
+    final rimLight = Paint()
+      ..color = Colors.white.withOpacity(isDark ? 0.16 : 0.35)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8
+      ..isAntiAlias = true;
+    final shadowRim = Paint()
+      ..color = (isDark ? Colors.black : const Color(0xFF3A3A4A))
+          .withOpacity(isDark ? 0.22 : 0.05)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8
+      ..isAntiAlias = true;
+    canvas.save();
+    canvas.clipRRect(rrect.deflate(0.4));
+    final lightPath = Path()
+      ..moveTo(size.width * 0.15, 0.6)
+      ..lineTo(0.6, size.height * 0.5);
+    canvas.drawPath(lightPath, rimLight);
+    final darkPath = Path()
+      ..moveTo(size.width * 0.85, size.height - 0.6)
+      ..lineTo(size.width - 0.6, size.height * 0.5);
+    canvas.drawPath(darkPath, shadowRim);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _NavEdgeRimPainter oldDelegate) =>
+      oldDelegate.isDark != isDark;
+}
+
+class _NavNoiseTile extends StatefulWidget {
+  const _NavNoiseTile();
+
+  @override
+  State<_NavNoiseTile> createState() => _NavNoiseTileState();
+}
+
+class _NavNoiseTileState extends State<_NavNoiseTile> {
+  ui.Image? _image;
+
+  @override
+  void initState() {
+    super.initState();
+    _build();
+  }
+
+  Future<void> _build() async {
+    const w = 128, h = 128;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final rnd = math.Random(0xCAFEBABE);
+    for (int y = 0; y < h; y++) {
+      for (int x = 0; x < w; x++) {
+        final v = rnd.nextInt(256);
+        canvas.drawRect(
+          Rect.fromLTWH(x.toDouble(), y.toDouble(), 1, 1),
+          Paint()..color = Color.fromARGB(255, v, v, v),
+        );
+      }
+    }
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(w, h);
+    if (mounted) setState(() => _image = img);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final img = _image;
+    if (img == null) return const SizedBox.expand();
+    return CustomPaint(painter: _NavNoisePainter(img));
+  }
+}
+
+class _NavNoisePainter extends CustomPainter {
+  final ui.Image image;
+  _NavNoisePainter(this.image);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const tile = 128.0;
+    final paint = Paint()..isAntiAlias = false;
+    for (double y = 0; y < size.height; y += tile) {
+      for (double x = 0; x < size.width; x += tile) {
+        canvas.drawImageRect(
+          image,
+          Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+          Rect.fromLTWH(x, y, tile, tile),
+          paint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _NavNoisePainter oldDelegate) =>
+      oldDelegate.image != image;
 }

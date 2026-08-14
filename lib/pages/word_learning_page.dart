@@ -778,132 +778,290 @@ class _WordLearningPageState extends State<WordLearningPage> {
         .wordsOf(TextbookService.instance.currentId)
         .where((w) => w.inNotebook)
         .toList();
+    const kSatMatrix = <double>[
+      1.3488, 0.147, 0.0342, 0, 0,
+      0.0426, 1.171, 0.0364, 0, 0,
+      0.0426, 0.147, 1.1714, 0, 0,
+      0, 0, 0, 1, 0,
+    ];
+    const radius = 24.0;
+    const blur = 50.0;
+    final tint = isDark ? AppTheme.kLuminaLime : const Color(0xFF527AFF);
+    final glassBase = isDark
+        ? const Color(0xFF1B1B1B).withOpacity(0.40)
+        : const Color(0xFFFFFFFF).withOpacity(0.32);
+    final glassTint1 = isDark
+        ? AppTheme.kLuminaLime.withOpacity(0.04)
+        : Colors.white.withOpacity(0.22);
+    final glassTint2 = isDark
+        ? const Color(0xFF000000).withOpacity(0.28)
+        : const Color(0xFFE4E4EA).withOpacity(0.22);
+    final innerBorder =
+        isDark ? Colors.white.withOpacity(0.22) : Colors.white.withOpacity(0.82);
+    final outerBorder = isDark
+        ? Colors.white.withOpacity(0.05)
+        : const Color(0xFF000000).withOpacity(0.04);
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 36, sigmaY: 36),
-          child: Container(
-            height: MediaQuery.of(context).size.height * 0.7,
-            decoration: BoxDecoration(
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(radius)),
+          border: Border.all(
+            color: outerBorder,
+            width: 1.0,
+            strokeAlign: BorderSide.strokeAlignOutside,
+          ),
+          boxShadow: [
+            BoxShadow(
               color: isDark
-                  ? const Color(0xFF1B1B1B).withOpacity(0.70)
-                  : const Color(0xFFFFFFFF).withOpacity(0.72),
-              border: Border(
-                top: BorderSide(
-                  color: isDark
-                      ? Colors.white.withOpacity(0.14)
-                      : Colors.white.withOpacity(0.75),
-                  width: 0.8,
+                  ? Colors.black.withOpacity(0.52)
+                  : const Color(0xFF3A3A4A).withOpacity(0.22),
+              blurRadius: 46,
+              spreadRadius: -8,
+              offset: const Offset(0, -10),
+            ),
+            BoxShadow(
+              color: tint.withOpacity(isDark ? 0.10 : 0.12),
+              blurRadius: 18,
+              spreadRadius: -4,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(radius)),
+          child: Stack(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 1) blur + sat 1.6
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(
+                      sigmaX: blur, sigmaY: blur, tileMode: TileMode.decal),
+                  child: ColorFiltered(
+                    colorFilter: const ColorFilter.matrix(kSatMatrix),
+                    child: const SizedBox.expand(),
+                  ),
                 ),
               ),
-            ),
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-                Container(
-                  width: 40,
-                  height: 5,
+              // 2) 三段渐变底色
+              Positioned.fill(
+                child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.outline.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(3),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color.alphaBlend(glassTint1, glassBase),
+                        glassBase,
+                        Color.alphaBlend(glassTint2, glassBase),
+                      ],
+                      stops: const [0.0, 0.55, 1.0],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 14),
-                Text(
-                  '生词本（${words.length}）',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
+              ),
+              // 3) 内描边（顶部 + 两侧）
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(radius)),
+                    border: Border.all(
+                      color: innerBorder,
+                      width: 0.8,
+                      strokeAlign: BorderSide.strokeAlignInside,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: words.isEmpty
-                      ? Center(
-                          child: Text(
-                            '还没有生词\n点"不认识"即可加入',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: theme.colorScheme.onSurface.withOpacity(0.35),
-                            ),
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                          itemCount: words.length,
-                          itemBuilder: (_, i) {
-                            final w = words[i];
-                            VocabWord? vw;
-                            for (final v in _vocab) {
-                              if (v.word == w.word) {
-                                vw = v;
-                                break;
-                              }
-                            }
-                            return LiquidGlassCard(
-                              margin: const EdgeInsets.symmetric(vertical: 5),
-                              padding: const EdgeInsets.all(14),
-                              borderRadius: 22,
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(w.word,
-                                            style: const TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.w700)),
-                                        if (vw != null)
-                                          Padding(
-                                            padding: const EdgeInsets.only(top: 3),
-                                            child: Text(vw.phonetic,
-                                                style: TextStyle(
-                                                    fontSize: 13,
-                                                    color: theme.colorScheme
-                                                        .onSurface
-                                                        .withOpacity(0.4))),
-                                          ),
-                                        if (vw != null)
-                                          Padding(
-                                            padding: const EdgeInsets.only(top: 2),
-                                            child: Text(vw.meaning,
-                                                style: TextStyle(
-                                                    fontSize: 14,
-                                                    color: theme.colorScheme
-                                                        .onSurface
-                                                        .withOpacity(0.65))),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: () async {
-                                      w.inNotebook = false;
-                                      await StorageService.instance
-                                          .saveWord(w);
-                                      setState(() {});
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(8),
-                                      child: Icon(CupertinoIcons.delete,
-                                          size: 21, color: AppTheme.kSystemRed),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
+              ),
+              // 4) 锐利顶部高光
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: ClipRRect(
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(radius)),
+                  child: SizedBox(
+                    height: 20,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.white.withOpacity(isDark ? 0.50 : 0.90),
+                            Colors.white.withOpacity(isDark ? 0.12 : 0.42),
+                            Colors.white.withOpacity(0.0),
+                          ],
+                          stops: const [0.0, 0.35, 1.0],
                         ),
+                      ),
+                    ),
+                  ),
                 ),
-              ],
-            ),
+              ),
+              // 5) 对角线微光
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: ShaderMask(
+                    shaderCallback: (bounds) => LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withOpacity(isDark ? 0.05 : 0.16),
+                        Colors.white.withOpacity(0.0),
+                        Colors.white.withOpacity(0.0),
+                        Colors.black.withOpacity(isDark ? 0.16 : 0.035),
+                      ],
+                      stops: const [0.0, 0.40, 0.75, 1.0],
+                    ).createShader(bounds),
+                    blendMode: BlendMode.srcOver,
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+              ),
+              // 6) 底部吸光
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 40,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        (isDark ? Colors.black : const Color(0xFF3A3A4A))
+                            .withOpacity(isDark ? 0.30 : 0.08),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // 7) 内容
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.7,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 10),
+                    Container(
+                      width: 40,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.outline.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      '生词本（${words.length}）',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: words.isEmpty
+                          ? Center(
+                              child: Text(
+                                '还没有生词\n点"不认识"即可加入',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: theme.colorScheme.onSurface
+                                      .withOpacity(0.35),
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                              itemCount: words.length,
+                              itemBuilder: (_, i) {
+                                final w = words[i];
+                                VocabWord? vw;
+                                for (final v in _vocab) {
+                                  if (v.word == w.word) {
+                                    vw = v;
+                                    break;
+                                  }
+                                }
+                                return LiquidGlassCard(
+                                  margin:
+                                      const EdgeInsets.symmetric(vertical: 5),
+                                  padding: const EdgeInsets.all(14),
+                                  borderRadius: 22,
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(w.word,
+                                                style: const TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight:
+                                                        FontWeight.w700)),
+                                            if (vw != null)
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.only(top: 3),
+                                                child: Text(vw.phonetic,
+                                                    style: TextStyle(
+                                                        fontSize: 13,
+                                                        color: theme
+                                                            .colorScheme
+                                                            .onSurface
+                                                            .withOpacity(0.4))),
+                                              ),
+                                            if (vw != null)
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.only(top: 2),
+                                                child: Text(vw.meaning,
+                                                    style: TextStyle(
+                                                        fontSize: 14,
+                                                        color: theme
+                                                            .colorScheme
+                                                            .onSurface
+                                                            .withOpacity(0.65))),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                      GestureDetector(
+                                        onTap: () async {
+                                          w.inNotebook = false;
+                                          await StorageService.instance
+                                              .saveWord(w);
+                                          setState(() {});
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8),
+                                          child: Icon(CupertinoIcons.delete,
+                                              size: 21,
+                                              color: AppTheme.kSystemRed),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

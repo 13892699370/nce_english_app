@@ -1,17 +1,22 @@
 import 'dart:io' show Platform;
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import '../theme/app_theme.dart';
 
-/// iOS 18 风格 Liquid Glass 液态玻璃卡片
-///
-/// 特性：
-/// 1. 高半径 BackdropFilter 背景模糊（sigma 32-50）
-/// 2. 半透明底色 + 多层渐变叠染，使模糊色彩有层次
-/// 3. 双层边框：内描边高光 + 外描边暗边，营造厚度感
-/// 4. 顶部弧形高光带 + 对角线微光，模仿玻璃反光
-/// 5. 内外双层阴影，悬浮感更强
-/// 6. 低端设备（CPU<4 核）自动降级到基础玻璃
+/// ============================================================
+/// iOS 18 风格 Liquid Glass 2.0 —— 液态玻璃卡片
+/// ============================================================
+/// 与 iOS 17 / macOS Frosted Glass 的关键区别：
+/// 1. ColorFilter.matrix saturation boost ×1.6  —— 玻璃下的颜色不会发灰，反而更润
+/// 2. 极高透明度（浅 32% / 深 40%）             —— 背景色斑能真正透出来
+/// 3. Sharp thin highlight                       —— 顶部 2px 锐利亮边 + 渐隐
+/// 4. Edge rim light & shadow                    —— 左上亮边/右下暗影
+/// 5. Fine noise overlay                         —— 消除色带，给玻璃颗粒感
+/// 6. Tinted shadow                              —— 阴影带 tint 色，不是死黑
+/// 7. Blur sigma 默认 50                         —— 更柔和的模糊边缘
 class LiquidGlassCard extends StatefulWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -29,7 +34,7 @@ class LiquidGlassCard extends StatefulWidget {
     required this.child,
     this.padding,
     this.margin,
-    this.blurRadius = 40,
+    this.blurRadius = 50,
     this.borderRadius = 28,
     this.glassColor,
     this.boxShadow,
@@ -78,73 +83,94 @@ class _LiquidGlassCardState extends State<LiquidGlassCard>
     setState(() {});
   }
 
+  // —— iOS 18 saturation boost matrix ——
+  // 取 saturation 1.6 (符合 iOS 18 玻璃的色彩增强感)
+  static List<double> _saturationMatrix(double sat) {
+    final r = 0.213;
+    final g = 0.715;
+    final b = 0.072;
+    final a00 = r * (1 - sat) + sat;
+    final a01 = g * (1 - sat);
+    final a02 = b * (1 - sat);
+    final a10 = r * (1 - sat);
+    final a11 = g * (1 - sat) + sat;
+    final a12 = b * (1 - sat);
+    final a20 = r * (1 - sat);
+    final a21 = g * (1 - sat);
+    final a22 = b * (1 - sat) + sat;
+    return [
+      a00, a01, a02, 0, 0, //
+      a10, a11, a12, 0, 0,
+      a20, a21, a22, 0, 0,
+      0, 0, 0, 1, 0,
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final radius = widget.borderRadius;
 
-    // —— 玻璃底色：iOS 风格更透，让模糊背景透出来 ——
+    // —— iOS 18 更透的玻璃底色 ——
     final Color glassBase;
-    final Color glassTint1; // 顶部色调（偏亮）
-    final Color glassTint2; // 底部色调（偏沉）
+    final Color glassTint1;
+    final Color glassTint2;
     if (widget.glassColor != null) {
       glassBase = widget.glassColor!;
       glassTint1 = Colors.white.withOpacity(0);
       glassTint2 = Colors.white.withOpacity(0);
     } else if (isDark) {
-      // 深色：半透明黑 + 极微绿调（Lime 环境色）
-      glassBase = const Color(0xFF1B1B1B).withOpacity(0.55);
-      glassTint1 = AppTheme.kLuminaLime.withOpacity(0.03);
-      glassTint2 = const Color(0xFF000000).withOpacity(0.20);
+      glassBase = const Color(0xFF1B1B1B).withOpacity(0.40); // 之前0.55 → 更透
+      glassTint1 = AppTheme.kLuminaLime.withOpacity(0.04);
+      glassTint2 = const Color(0xFF000000).withOpacity(0.28);
     } else {
-      // 浅色：半透明白 + 轻微冷灰调
-      glassBase = const Color(0xFFFFFFFF).withOpacity(0.48);
-      glassTint1 = const Color(0xFFFFFFFF).withOpacity(0.30);
-      glassTint2 = const Color(0xFFEFEFF3).withOpacity(0.25);
+      glassBase = const Color(0xFFFFFFFF).withOpacity(0.32); // 之前0.48 → 更透
+      glassTint1 = const Color(0xFFFFFFFF).withOpacity(0.22);
+      glassTint2 = const Color(0xFFE4E4EA).withOpacity(0.22);
     }
 
-    // —— 双层边框颜色：内层高光 + 外层描边 ——
+    // —— 双层边框 ——
     final Color innerBorder;
     final Color outerBorder;
     if (isDark) {
-      innerBorder = Colors.white.withOpacity(0.18); // 上边缘高光
-      outerBorder = Colors.white.withOpacity(0.06);
+      innerBorder = Colors.white.withOpacity(0.22); // 之前0.18 → 更亮
+      outerBorder = Colors.white.withOpacity(0.05);
     } else {
-      innerBorder = Colors.white.withOpacity(0.75);
-      outerBorder = const Color(0xFF000000).withOpacity(0.05);
+      innerBorder = Colors.white.withOpacity(0.82); // 之前0.75 → 更亮
+      outerBorder = const Color(0xFF000000).withOpacity(0.04);
     }
 
-    // —— 内外双层阴影 ——
+    // —— iOS 18 Tinted shadow: 阴影带一点点 tint ——
+    final tint = isDark ? AppTheme.kLuminaLime : const Color(0xFF527AFF);
     final List<BoxShadow> shadows = widget.boxShadow ??
         (isDark
             ? [
-                // 外部：深阴影让卡片从黑背景上浮
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.45),
-                  blurRadius: 36,
+                  color: Colors.black.withOpacity(0.48),
+                  blurRadius: 42,
                   spreadRadius: -6,
-                  offset: const Offset(0, 16),
+                  offset: const Offset(0, 18),
                 ),
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.20),
-                  blurRadius: 12,
+                  color: tint.withOpacity(0.10),
+                  blurRadius: 16,
                   spreadRadius: -2,
-                  offset: const Offset(0, 6),
+                  offset: const Offset(0, 8),
                 ),
               ]
             : [
                 BoxShadow(
-                  color: const Color(0xFF3A3A4A).withOpacity(0.16),
-                  blurRadius: 40,
+                  color: const Color(0xFF3A3A4A).withOpacity(0.20),
+                  blurRadius: 46,
                   spreadRadius: -8,
-                  offset: const Offset(0, 18),
+                  offset: const Offset(0, 20),
                 ),
                 BoxShadow(
-                  color: const Color(0xFF3A3A4A).withOpacity(0.08),
-                  blurRadius: 14,
-                  spreadRadius: -2,
-                  offset: const Offset(0, 6),
+                  color: tint.withOpacity(0.12),
+                  blurRadius: 18,
+                  spreadRadius: -4,
+                  offset: const Offset(0, 8),
                 ),
               ]);
 
@@ -155,10 +181,9 @@ class _LiquidGlassCardState extends State<LiquidGlassCard>
       builder: (context, child) {
         final t = _pressController.value;
         final scale = 1.0 + (pressScale - 1.0) * t;
-        final opacity = 1.0 - 0.12 * t;
         return Transform.scale(
           scale: scale,
-          child: Opacity(opacity: opacity, child: child),
+          child: child,
         );
       },
       child: AnimatedContainer(
@@ -168,6 +193,7 @@ class _LiquidGlassCardState extends State<LiquidGlassCard>
         child: _GlassSurface(
           radius: radius,
           blur: _effectiveBlur,
+          saturation: _isLowEndDevice ? 1.0 : 1.6,
           glassBase: glassBase,
           glassTint1: glassTint1,
           glassTint2: glassTint2,
@@ -197,12 +223,13 @@ class _LiquidGlassCardState extends State<LiquidGlassCard>
   }
 }
 
-/// —— 核心：真正的 Glass 表层容器 ——
-/// 用 Stack 叠加顺序严格保证：
-/// 外边框 → BackdropFilter 模糊 → 底色渐变 → 内边框高光 → 顶部反光 → 对角线微光 → child
+/// ============================================================
+/// GlassSurface —— 严格按 iOS 18 顺序叠 10 层
+/// ============================================================
 class _GlassSurface extends StatelessWidget {
   final double radius;
   final double blur;
+  final double saturation;
   final Color glassBase;
   final Color glassTint1;
   final Color glassTint2;
@@ -216,6 +243,7 @@ class _GlassSurface extends StatelessWidget {
   const _GlassSurface({
     required this.radius,
     required this.blur,
+    required this.saturation,
     required this.glassBase,
     required this.glassTint1,
     required this.glassTint2,
@@ -229,7 +257,8 @@ class _GlassSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 外层：外描边 + 阴影容器
+    final satMatrix = _LiquidGlassCardState._saturationMatrix(saturation);
+
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
@@ -240,20 +269,23 @@ class _GlassSurface extends StatelessWidget {
         ),
         boxShadow: shadows,
       ),
-      // 裁切圆角，用于后面的 BackdropFilter 与 高光
       child: ClipRRect(
         borderRadius: BorderRadius.circular(radius),
         child: Stack(
           children: [
-            // 1) BackdropFilter：大面积背景模糊（Liquid Glass 核心）
+            // 1) iOS 18 核心：模糊 + 饱和度提升（color matrix 叠在 blur 上）
             Positioned.fill(
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-                child: const SizedBox.expand(),
+                filter: ImageFilter.blur(
+                    sigmaX: blur, sigmaY: blur, tileMode: TileMode.decal),
+                child: ColorFiltered(
+                  colorFilter: ColorFilter.matrix(satMatrix),
+                  child: const SizedBox.expand(),
+                ),
               ),
             ),
 
-            // 2) 玻璃底色 + 垂直渐变叠染，让颜色有深度
+            // 2) 玻璃底色 + 三段垂直渐变（上亮 → 中 → 下沉）
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -271,7 +303,7 @@ class _GlassSurface extends StatelessWidget {
               ),
             ),
 
-            // 3) 内描边：用 Container 的 inside 边，制造边缘厚度
+            // 3) 内描边（inside）
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
@@ -285,7 +317,7 @@ class _GlassSurface extends StatelessWidget {
               ),
             ),
 
-            // 4) 顶部弧形高光（真正的玻璃反光——iOS 标志性效果）
+            // 4) iOS 18 锐利顶部高光 —— 2px 亮边 + 快速渐隐（不再是大弧形）
             if (enableHighlight)
               Positioned(
                 top: 0,
@@ -295,18 +327,21 @@ class _GlassSurface extends StatelessWidget {
                   borderRadius:
                       BorderRadius.vertical(top: Radius.circular(radius)),
                   child: SizedBox(
-                    height: radius * 1.2,
+                    height: math.min(radius * 0.9, 22),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.white.withOpacity(isDark ? 0.16 : 0.55),
-                            Colors.white.withOpacity(isDark ? 0.04 : 0.12),
+                            // 第一行 2px 最亮，模拟玻璃切割边缘
+                            Colors.white
+                                .withOpacity(isDark ? 0.50 : 0.90),
+                            Colors.white
+                                .withOpacity(isDark ? 0.12 : 0.42),
                             Colors.white.withOpacity(0.0),
                           ],
-                          stops: const [0.0, 0.55, 1.0],
+                          stops: const [0.0, 0.35, 1.0],
                         ),
                       ),
                     ),
@@ -314,7 +349,21 @@ class _GlassSurface extends StatelessWidget {
                 ),
               ),
 
-            // 5) 对角线微光（左上 → 右下），让整体更"润"
+            // 5) Edge rim —— 左上亮边 / 右下暗影（细线切面感）
+            if (enableHighlight) ...[
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _EdgeRimPainter(
+                      radius: radius,
+                      isDark: isDark,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+
+            // 6) 对角线微光：左上微亮 → 右下微暗
             if (enableHighlight)
               Positioned.fill(
                 child: IgnorePointer(
@@ -323,12 +372,12 @@ class _GlassSurface extends StatelessWidget {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Colors.white.withOpacity(isDark ? 0.06 : 0.22),
+                        Colors.white.withOpacity(isDark ? 0.05 : 0.16),
                         Colors.white.withOpacity(0.0),
                         Colors.white.withOpacity(0.0),
-                        Colors.black.withOpacity(isDark ? 0.10 : 0.03),
+                        Colors.black.withOpacity(isDark ? 0.16 : 0.035),
                       ],
-                      stops: const [0.0, 0.35, 0.75, 1.0],
+                      stops: const [0.0, 0.40, 0.75, 1.0],
                     ).createShader(bounds),
                     blendMode: BlendMode.srcOver,
                     child: const SizedBox.expand(),
@@ -336,13 +385,13 @@ class _GlassSurface extends StatelessWidget {
                 ),
               ),
 
-            // 6) 底部内阴影：模仿玻璃下边缘吸光
+            // 7) 底部吸光阴影
             if (enableHighlight)
               Positioned(
                 left: 0,
                 right: 0,
                 bottom: 0,
-                height: radius,
+                height: radius * 1.0,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -353,18 +402,155 @@ class _GlassSurface extends StatelessWidget {
                         (isDark
                                 ? Colors.black
                                 : const Color(0xFF3A3A4A))
-                            .withOpacity(isDark ? 0.28 : 0.08),
+                            .withOpacity(isDark ? 0.36 : 0.10),
                       ],
                     ),
                   ),
                 ),
               ),
 
-            // 7) child
+            // 8) Noise overlay —— 用 hash noise 消除色带，给玻璃颗粒感
+            if (enableHighlight)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Opacity(
+                    opacity: isDark ? 0.05 : 0.035,
+                    child: const _NoiseTile(),
+                  ),
+                ),
+              ),
+
+            // 9) child content
             child,
           ],
         ),
       ),
     );
   }
+}
+
+/// ============================================================
+/// Edge Rim Painter —— 左上亮边 / 右下暗影
+/// ============================================================
+class _EdgeRimPainter extends CustomPainter {
+  final double radius;
+  final bool isDark;
+
+  _EdgeRimPainter({required this.radius, required this.isDark});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rrect = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      Radius.circular(radius),
+    );
+
+    // 左上亮边（路径：沿着左边缘和顶边缘内侧，画一条 0.8px 半透明白）
+    final rimLight = Paint()
+      ..color = Colors.white.withOpacity(isDark ? 0.16 : 0.35)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8
+      ..isAntiAlias = true;
+
+    final shadowRim = Paint()
+      ..color = (isDark ? Colors.black : const Color(0xFF3A3A4A))
+          .withOpacity(isDark ? 0.22 : 0.05)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8
+      ..isAntiAlias = true;
+
+    // 裁剪在 rrect 内部 1px 的范围，避免边缘溢出
+    canvas.save();
+    canvas.clipRRect(rrect.deflate(0.4));
+
+    // 左上角象限 —— 亮边
+    final lightPath = Path()
+      ..moveTo(radius * 0.5, 0.6)
+      ..lineTo(0.6, radius * 0.5);
+    canvas.drawPath(lightPath, rimLight);
+
+    // 右下角象限 —— 暗影
+    final darkPath = Path()
+      ..moveTo(size.width - radius * 0.5, size.height - 0.6)
+      ..lineTo(size.width - 0.6, size.height - radius * 0.5);
+    canvas.drawPath(darkPath, shadowRim);
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _EdgeRimPainter oldDelegate) =>
+      oldDelegate.radius != radius || oldDelegate.isDark != isDark;
+}
+
+/// ============================================================
+/// Noise tile —— 8x8 hash noise pattern，整张 tile 平铺
+/// ============================================================
+class _NoiseTile extends StatefulWidget {
+  const _NoiseTile();
+
+  @override
+  State<_NoiseTile> createState() => _NoiseTileState();
+}
+
+class _NoiseTileState extends State<_NoiseTile> {
+  ui.Image? _image;
+
+  @override
+  void initState() {
+    super.initState();
+    _build();
+  }
+
+  Future<void> _build() async {
+    const w = 128, h = 128;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final rnd = math.Random(0xCAFEBABE);
+    for (int y = 0; y < h; y++) {
+      for (int x = 0; x < w; x++) {
+        final v = rnd.nextInt(256);
+        canvas.drawRect(
+          Rect.fromLTWH(x.toDouble(), y.toDouble(), 1, 1),
+          Paint()..color = Color.fromARGB(255, v, v, v),
+        );
+      }
+    }
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(w, h);
+    if (mounted) setState(() => _image = img);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final img = _image;
+    if (img == null) return const SizedBox.expand();
+    return CustomPaint(painter: _NoisePainter(img));
+  }
+}
+
+class _NoisePainter extends CustomPainter {
+  final ui.Image image;
+
+  _NoisePainter(this.image);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const tile = 128.0;
+    final paint = Paint()..isAntiAlias = false;
+    for (double y = 0; y < size.height; y += tile) {
+      for (double x = 0; x < size.width; x += tile) {
+        canvas.drawImageRect(
+          image,
+          Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+          Rect.fromLTWH(x, y, tile, tile),
+          paint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _NoisePainter oldDelegate) =>
+      oldDelegate.image != image;
 }

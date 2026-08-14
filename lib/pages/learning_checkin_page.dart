@@ -253,7 +253,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
         child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Column(
@@ -266,7 +266,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                       decoration: TextDecoration.none,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Text(
                     '完成今天的听说读写任务，保持学习节奏。',
                     style: theme.textTheme.bodyMedium?.copyWith(
@@ -279,7 +279,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -292,7 +292,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                         onChanged: _onTextbookChanged,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     Text(
                       _today,
                       style: TextStyle(
@@ -307,12 +307,12 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
             ),
           ),
           SizedBox(
-            height: 48,
+            height: 52,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: totalDays,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
               itemBuilder: (_, i) {
                 final day = i + 1;
                 final selected = day == _currentDay;
@@ -322,12 +322,12 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                     duration: const Duration(milliseconds: 150),
                     curve: Curves.easeOut,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
+                        horizontal: 18, vertical: 12),
                     decoration: BoxDecoration(
                       color: selected
                           ? theme.colorScheme.primary
                           : theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
                       child: Text(
@@ -346,7 +346,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
               },
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 10),
           Expanded(
             child: _loading
                 ? const Center(child: CupertinoActivityIndicator())
@@ -372,32 +372,33 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 132),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 140),
       children: [
         LiquidGlassCard(
+          margin: const EdgeInsets.only(bottom: 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primary.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       '$_currentDay',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 20,
                         fontWeight: FontWeight.w600,
                         color: theme.colorScheme.primary,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -405,11 +406,11 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                         Text(
                           '第$_currentDay天',
                           style: TextStyle(
-                            fontSize: 17,
+                            fontSize: 18,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4),
                         Text(
                           '${TextbookService.instance.current.name} · ${dayLessons.map((l) => 'L${l.number}（${l.isNew ? "新课" : "复习"}）').join(' + ')}',
                           style: TextStyle(
@@ -422,24 +423,24 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               ...dayLessons.map((l) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                              horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
                             color: l.isNew
                                 ? AppTheme.kSystemTeal.withOpacity(0.12)
                                 : AppTheme.kSystemOrange.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             'L${l.number} · ${l.isNew ? "新课" : "复习"}',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: l.isNew
                                   ? AppTheme.kSystemTeal
@@ -447,12 +448,12 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             l.title,
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 14,
                               color: theme.colorScheme.onSurface.withOpacity(0.6),
                             ),
                             maxLines: 1,
@@ -482,12 +483,12 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
           states: _formal,
           section: 1,
           extra: Padding(
-            padding: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.only(top: 12),
             child: CupertinoTextField(
               controller: _imitationCtrl,
               maxLines: 3,
               placeholder: '在此仿写本课句型句子…',
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               onChanged: (_) => _debouncedSave(),
             ),
           ),
@@ -501,7 +502,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
           section: 2,
         ),
 
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         Center(
           child: Text(
             _isSaving ? '保存中…' : '已自动保存',
@@ -531,24 +532,24 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
         children: [
           Row(
             children: [
-              Icon(icon, size: 20, color: theme.colorScheme.primary),
-              const SizedBox(width: 8),
+              Icon(icon, size: 22, color: theme.colorScheme.primary),
+              const SizedBox(width: 10),
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 17,
+                  fontSize: 18,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const Spacer(),
               Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: doneCount == labels.length
                       ? AppTheme.kSystemGreen.withOpacity(0.12)
                       : theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   '$doneCount/${labels.length}',
@@ -563,12 +564,15 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 14),
           for (int i = 0; i < labels.length; i++)
-            TaskCheckbox(
-              label: labels[i],
-              value: states[i],
-              onChanged: (v) => _onTaskToggle(section, i, v),
+            Padding(
+              padding: EdgeInsets.only(bottom: i == labels.length - 1 ? 0 : 4),
+              child: TaskCheckbox(
+                label: labels[i],
+                value: states[i],
+                onChanged: (v) => _onTaskToggle(section, i, v),
+              ),
             ),
           if (extra != null) extra,
         ],

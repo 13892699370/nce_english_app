@@ -84,10 +84,10 @@ class _CalendarPageState extends State<CalendarPage> {
       child: Material(
         color: Colors.transparent,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 132),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 140),
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 6, 4, 14),
+              padding: const EdgeInsets.fromLTRB(4, 10, 4, 18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -98,7 +98,7 @@ class _CalendarPageState extends State<CalendarPage> {
                       decoration: TextDecoration.none,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Text(
                     '回看历史打卡，只读查看当天任务和仿写记录。',
                     style: theme.textTheme.bodyMedium?.copyWith(
@@ -110,7 +110,7 @@ class _CalendarPageState extends State<CalendarPage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: 16),
               child: TextbookDropdown(
                 options: textbooks,
                 value: _textbookId,
@@ -121,11 +121,11 @@ class _CalendarPageState extends State<CalendarPage> {
               ),
             ),
             LiquidGlassCard(
+              margin: const EdgeInsets.only(bottom: 16),
               child: _buildCalendar(theme, isDark, checkinMap, today),
             ),
-            const SizedBox(height: 12),
             _buildLegend(theme, isDark),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             _buildStats(theme, isDark, checkinMap),
           ],
         ),
@@ -155,10 +155,10 @@ class _CalendarPageState extends State<CalendarPage> {
             GestureDetector(
               onTap: _prevMonth,
               child: Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 child: Icon(
                   CupertinoIcons.chevron_left,
-                  size: 20,
+                  size: 22,
                   color: theme.colorScheme.primary,
                 ),
               ),
@@ -166,7 +166,7 @@ class _CalendarPageState extends State<CalendarPage> {
             Text(
               monthLabel,
               style: TextStyle(
-                fontSize: 17,
+                fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.onSurface,
               ),
@@ -174,17 +174,17 @@ class _CalendarPageState extends State<CalendarPage> {
             GestureDetector(
               onTap: _nextMonth,
               child: Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 child: Icon(
                   CupertinoIcons.chevron_right,
-                  size: 20,
+                  size: 22,
                   color: theme.colorScheme.primary,
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         Row(
           children: weekLabels
               .map((w) => Expanded(
@@ -201,14 +201,14 @@ class _CalendarPageState extends State<CalendarPage> {
                   ))
               .toList(),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 7,
-            mainAxisSpacing: 4,
-            crossAxisSpacing: 4,
+            mainAxisSpacing: 6,
+            crossAxisSpacing: 6,
             childAspectRatio: 1,
           ),
           itemCount: firstWeekday + daysInMonth,
@@ -290,9 +290,9 @@ class _CalendarPageState extends State<CalendarPage> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _legendDot(theme, AppTheme.kSystemGreen, '全部完成'),
-        const SizedBox(width: 16),
+        const SizedBox(width: 22),
         _legendDot(theme, AppTheme.kSystemOrange, '部分完成'),
-        const SizedBox(width: 16),
+        const SizedBox(width: 22),
         _legendDot(theme, const Color(0xFF8E8E93), '未打卡'),
       ],
     );
@@ -303,15 +303,15 @@ class _CalendarPageState extends State<CalendarPage> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 8,
-          height: 8,
+          width: 10,
+          height: 10,
           decoration: BoxDecoration(shape: BoxShape.circle, color: color),
         ),
-        const SizedBox(width: 5),
+        const SizedBox(width: 7),
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: FontWeight.w500,
             color: theme.colorScheme.onSurface.withOpacity(0.5),
           ),
@@ -342,7 +342,7 @@ class _CalendarPageState extends State<CalendarPage> {
           ),
           Container(
             width: 1,
-            height: 40,
+            height: 48,
             color: theme.colorScheme.outline.withOpacity(0.12),
           ),
           Expanded(
@@ -355,7 +355,7 @@ class _CalendarPageState extends State<CalendarPage> {
           ),
           Container(
             width: 1,
-            height: 40,
+            height: 48,
             color: theme.colorScheme.outline.withOpacity(0.12),
           ),
           Expanded(
@@ -382,16 +382,16 @@ class _CalendarPageState extends State<CalendarPage> {
         Text(
           value,
           style: TextStyle(
-            fontSize: 22,
+            fontSize: 24,
             fontWeight: FontWeight.w700,
             color: color,
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: FontWeight.w500,
             color: theme.colorScheme.onSurface.withOpacity(0.5),
           ),

@@ -42,11 +42,11 @@ class _HomePageState extends State<HomePage> {
         Positioned(
           left: 20,
           right: 20,
-          bottom: 18,
+          bottom: 6,
           child: SafeArea(
             top: false,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               decoration: BoxDecoration(
                 color: (isDark
                         ? AppTheme.kLuminaSurfaceDark

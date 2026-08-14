@@ -206,7 +206,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
         child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Column(
@@ -219,7 +219,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
                       decoration: TextDecoration.none,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Text(
                     '按天复习，听发音，标记生词。',
                     style: theme.textTheme.bodyMedium?.copyWith(
@@ -232,24 +232,24 @@ class _WordLearningPageState extends State<WordLearningPage> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
             child: Row(
               children: [
                 GestureDetector(
                   onTap: () => _showNotebook(context),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 6),
+                        horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: AppTheme.kSystemOrange.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(CupertinoIcons.book,
-                            size: 14, color: AppTheme.kSystemOrange),
-                        const SizedBox(width: 4),
+                            size: 15, color: AppTheme.kSystemOrange),
+                        const SizedBox(width: 6),
                         Text(
                           '生词本 $_notebookCount',
                           style: TextStyle(
@@ -265,12 +265,12 @@ class _WordLearningPageState extends State<WordLearningPage> {
                 const Spacer(),
                 Icon(
                   CupertinoIcons.speaker_2_fill,
-                  size: 16,
+                  size: 17,
                   color: theme.colorScheme.onSurface.withOpacity(0.4),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 6),
                 Transform.scale(
-                  scale: 0.8,
+                  scale: 0.85,
                   child: CupertinoSwitch(
                     value: AudioFeedbackService.instance.enabled,
                     onChanged: _toggleSoundEffects,
@@ -287,7 +287,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
               onChanged: _onTextbookChanged,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -300,7 +300,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
                     value: '$_todayLearned',
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
                   child: _statChip(
                     theme: theme,
@@ -309,7 +309,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
                     value: '$_toReview',
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
                   child: _statChip(
                     theme: theme,
@@ -321,12 +321,12 @@ class _WordLearningPageState extends State<WordLearningPage> {
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: _buildDayFilter(theme),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 10),
           Expanded(
             child: _loading
                 ? const Center(child: CupertinoActivityIndicator())
@@ -354,30 +354,30 @@ class _WordLearningPageState extends State<WordLearningPage> {
               });
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: _showDayFilter
                     ? theme.colorScheme.primary.withOpacity(0.10)
                     : theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
                     CupertinoIcons.line_horizontal_3_decrease,
-                    size: 14,
+                    size: 15,
                     color: _showDayFilter
                         ? theme.colorScheme.primary
                         : theme.colorScheme.onSurface.withOpacity(0.5),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   Text(
                     _showDayFilter
                         ? '第$_currentDay天 · L${_currentDay * 2 - 1}-L${_currentDay * 2}'
                         : '全部单词',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
                       color: _showDayFilter
                           ? theme.colorScheme.primary
@@ -390,7 +390,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
           ),
         ),
         if (_showDayFilter) ...[
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Expanded(
             child: DayWheelPicker(
               currentDay: _currentDay,
@@ -419,26 +419,26 @@ class _WordLearningPageState extends State<WordLearningPage> {
     required String value,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
         color: color.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
           Text(
             value,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.w700,
               color: color,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 4),
           Text(
             label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w500,
               color: theme.colorScheme.onSurface.withOpacity(0.5),
             ),
@@ -458,8 +458,8 @@ class _WordLearningPageState extends State<WordLearningPage> {
           child: GestureDetector(
             onTap: () => setState(() => _revealed = true),
             child: LiquidGlassCard(
-              margin: const EdgeInsets.all(16),
-              borderRadius: 16,
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              borderRadius: 20,
               child: Stack(
                 children: [
                   Positioned(
@@ -467,15 +467,15 @@ class _WordLearningPageState extends State<WordLearningPage> {
                     right: 0,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                          horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: AppTheme.kSystemTeal.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         'L${word.lessonNumber}',
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.kSystemTeal,
                         ),
@@ -491,28 +491,31 @@ class _WordLearningPageState extends State<WordLearningPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: List.generate(
                               5,
-                              (i) => Icon(
-                                CupertinoIcons.star_fill,
-                                size: 16,
-                                color: i < progress.familiarity
-                                    ? AppTheme.kSystemYellow
-                                    : theme.colorScheme.outline
-                                        .withOpacity(0.2),
+                              (i) => Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 2),
+                                child: Icon(
+                                  CupertinoIcons.star_fill,
+                                  size: 18,
+                                  color: i < progress.familiarity
+                                      ? AppTheme.kSystemYellow
+                                      : theme.colorScheme.outline
+                                          .withOpacity(0.2),
+                                ),
                               ),
                             ),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 18),
                         ],
                         Text(
                           word.word,
                           style: TextStyle(
-                            fontSize: 36,
+                            fontSize: 40,
                             fontWeight: FontWeight.w700,
                             color: theme.colorScheme.onSurface,
                             letterSpacing: 0.5,
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -521,7 +524,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
                               label: '英音',
                               accent: WordVoiceAccent.british,
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 12),
                             _voiceButton(
                               theme: theme,
                               label: '美音',
@@ -529,33 +532,33 @@ class _WordLearningPageState extends State<WordLearningPage> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 14),
                         Text(
                           word.phonetic,
                           style: TextStyle(
-                            fontSize: 17,
+                            fontSize: 18,
                             color:
                                 theme.colorScheme.onSurface.withOpacity(0.5),
                             fontStyle: FontStyle.italic,
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 28),
                         AnimatedOpacity(
                           duration: const Duration(milliseconds: 200),
                           opacity: _revealed ? 1 : 0,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 14),
+                                horizontal: 24, vertical: 18),
                             decoration: BoxDecoration(
                               color: theme.colorScheme.primary
                                   .withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                             child: Text(
                               word.meaning,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontSize: 20,
+                                fontSize: 21,
                                 fontWeight: FontWeight.w600,
                                 color: theme.colorScheme.onSurface,
                               ),
@@ -563,19 +566,19 @@ class _WordLearningPageState extends State<WordLearningPage> {
                           ),
                         ),
                         if (!_revealed) ...[
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 28),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(CupertinoIcons.hand_draw,
-                                  size: 14,
+                                  size: 15,
                                   color: theme.colorScheme.onSurface
                                       .withOpacity(0.35)),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 8),
                               Text(
                                 '点击卡片查看释义',
                                 style: TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 14,
                                   color: theme.colorScheme.onSurface
                                       .withOpacity(0.35),
                                 ),
@@ -592,7 +595,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: [
               Text(
@@ -603,13 +606,13 @@ class _WordLearningPageState extends State<WordLearningPage> {
                   color: theme.colorScheme.onSurface.withOpacity(0.4),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(3),
+                  borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: (_index + 1) / _vocab.length,
-                    minHeight: 4,
+                    minHeight: 5,
                     backgroundColor:
                         theme.colorScheme.surface,
                     valueColor:
@@ -620,27 +623,27 @@ class _WordLearningPageState extends State<WordLearningPage> {
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 132),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 140),
           child: Row(
             children: [
               Expanded(
                 child: DuolingoButton(
                   label: '不认识',
                   variant: DuolingoButtonVariant.danger,
-                  minHeight: 50,
-                  borderRadius: 12,
+                  minHeight: 54,
+                  borderRadius: 14,
                   onPressed: _revealed ? () => _answer(false) : null,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: DuolingoButton(
                   label: '认识',
                   variant: DuolingoButtonVariant.success,
-                  minHeight: 50,
-                  borderRadius: 12,
+                  minHeight: 54,
+                  borderRadius: 14,
                   onPressed: _revealed ? () => _answer(true) : null,
                 ),
               ),
@@ -660,28 +663,28 @@ class _WordLearningPageState extends State<WordLearningPage> {
     return GestureDetector(
       onTap: () => _speakWord(accent),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: selected
               ? theme.colorScheme.primary.withOpacity(0.12)
               : theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               CupertinoIcons.speaker_2_fill,
-              size: 14,
+              size: 15,
               color: selected
                   ? theme.colorScheme.primary
                   : theme.colorScheme.onSurface.withOpacity(0.5),
             ),
-            const SizedBox(width: 5),
+            const SizedBox(width: 7),
             Text(
               label,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: selected
                     ? theme.colorScheme.primary

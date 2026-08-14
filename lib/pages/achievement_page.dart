@@ -37,10 +37,10 @@ class _AchievementPageState extends State<AchievementPage> {
       child: Material(
         color: Colors.transparent,
         child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 132),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 140),
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(4, 6, 4, 14),
+            padding: const EdgeInsets.fromLTRB(4, 10, 4, 18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -51,7 +51,7 @@ class _AchievementPageState extends State<AchievementPage> {
                     decoration: TextDecoration.none,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
                   '查看连续学习、累计打卡和已解锁徽章。',
                   style: theme.textTheme.bodyMedium?.copyWith(
@@ -63,6 +63,7 @@ class _AchievementPageState extends State<AchievementPage> {
             ),
           ),
           LiquidGlassCard(
+            margin: const EdgeInsets.only(bottom: 16),
             child: Column(
               children: [
                 Row(
@@ -78,7 +79,7 @@ class _AchievementPageState extends State<AchievementPage> {
                     ),
                     Container(
                         width: 1,
-                        height: 44,
+                        height: 48,
                         color: theme.colorScheme.outline.withOpacity(0.12)),
                     Expanded(
                       child: _bigStat(
@@ -91,7 +92,7 @@ class _AchievementPageState extends State<AchievementPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 18),
                 Row(
                   children: [
                     Expanded(
@@ -105,7 +106,7 @@ class _AchievementPageState extends State<AchievementPage> {
                     ),
                     Container(
                         width: 1,
-                        height: 44,
+                        height: 48,
                         color: theme.colorScheme.outline.withOpacity(0.12)),
                     Expanded(
                       child: _bigStat(
@@ -121,7 +122,6 @@ class _AchievementPageState extends State<AchievementPage> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
           ...kAchievements.map((def) => _buildAchievementCard(
                 theme: theme,
                 isDark: isDark,
@@ -144,21 +144,21 @@ class _AchievementPageState extends State<AchievementPage> {
   }) {
     return Column(
       children: [
-        Icon(icon, color: color, size: 22),
-        const SizedBox(height: 4),
+        Icon(icon, color: color, size: 24),
+        const SizedBox(height: 6),
         Text(
           value,
           style: TextStyle(
-            fontSize: 24,
+            fontSize: 26,
             fontWeight: FontWeight.w700,
             color: color,
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: FontWeight.w500,
             color: theme.colorScheme.onSurface.withOpacity(0.5),
           ),
@@ -179,13 +179,12 @@ class _AchievementPageState extends State<AchievementPage> {
     final progress = _progressOf(def, all);
 
     return LiquidGlassCard(
-      margin: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
-            width: 56,
-            height: 56,
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: unlocked
@@ -217,11 +216,11 @@ class _AchievementPageState extends State<AchievementPage> {
               opacity: unlocked ? 1.0 : 0.35,
               child: Text(
                 def.emoji,
-                style: const TextStyle(fontSize: 28),
+                style: const TextStyle(fontSize: 30),
               ),
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,7 +231,7 @@ class _AchievementPageState extends State<AchievementPage> {
                       child: Text(
                         def.title,
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 17,
                           fontWeight: FontWeight.w600,
                           color: unlocked
                               ? theme.colorScheme.onSurface
@@ -241,21 +240,21 @@ class _AchievementPageState extends State<AchievementPage> {
                       ),
                     ),
                     if (unlocked) ...[
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 8),
                       Icon(CupertinoIcons.checkmark_circle_fill,
-                          color: AppTheme.kSystemGreen, size: 16),
+                          color: AppTheme.kSystemGreen, size: 18),
                     ],
                   ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
                   def.desc,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     color: theme.colorScheme.onSurface.withOpacity(0.55),
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 if (unlocked)
                   Text(
                     '解锁于 $unlockedAt',

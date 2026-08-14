@@ -99,7 +99,7 @@ class _LiquidGlassCardState extends State<LiquidGlassCard>
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         margin: widget.margin ??
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(widget.borderRadius),
           child: BackdropFilter(
@@ -152,7 +152,7 @@ class _LiquidGlassCardState extends State<LiquidGlassCard>
                     ),
                   Padding(
                     padding:
-                        widget.padding ?? const EdgeInsets.all(16),
+                        widget.padding ?? const EdgeInsets.all(20),
                     child: widget.child,
                   ),
                 ],

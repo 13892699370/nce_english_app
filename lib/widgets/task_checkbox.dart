@@ -43,13 +43,13 @@ class _TaskCheckboxState extends State<TaskCheckbox> {
         duration: const Duration(milliseconds: 100),
         opacity: _pressed ? 0.5 : 1.0,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
             children: [
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                width: 24,
-                height: 24,
+                width: 26,
+                height: 26,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: widget.value ? accentColor : Colors.transparent,
@@ -66,16 +66,16 @@ class _TaskCheckboxState extends State<TaskCheckbox> {
                     ? const Icon(
                         CupertinoIcons.check_mark,
                         color: AppTheme.kLuminaBlack,
-                        size: 16,
+                        size: 17,
                       )
                     : null,
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   widget.label,
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 16,
                     fontWeight: FontWeight.w500,
                     color: widget.value
                         ? (isDark

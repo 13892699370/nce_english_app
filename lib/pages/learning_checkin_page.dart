@@ -14,11 +14,13 @@ import '../utils/date_util.dart';
 import '../widgets/liquid_glass_card.dart';
 import '../widgets/textbook_dropdown.dart';
 import '../widgets/task_checkbox.dart';
+import '../widgets/duolingo_button.dart';
 import '../widgets/celebration_dialog.dart';
 import '../widgets/day_completion_overlay.dart';
 import '../widgets/theme_toggle_button.dart';
 
-/// 新概念学习打卡页（iOS 原生风格）
+/// 新概念学习打卡页（Modern Clean 风格）
+/// 灵感来源：Apple Fitness / Things 3 / Streaks
 class LearningCheckinPage extends StatefulWidget {
   const LearningCheckinPage({super.key});
 
@@ -138,10 +140,12 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
   Future<void> _doSave() async {
     if (_isSaving) return;
     _isSaving = true;
+    if (mounted) setState(() {});
 
     final dayLessons = _dayLessons;
     if (dayLessons.isEmpty) {
       _isSaving = false;
+      if (mounted) setState(() {});
       return;
     }
 
@@ -179,6 +183,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
     }
 
     _isSaving = false;
+    if (mounted) setState(() {});
   }
 
   void _jumpToNextDay() {
@@ -196,11 +201,12 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
         _currentDay,
       );
       _loadCheckin();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('打卡完成，进入第$_currentDay天'),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: AppTheme.kSystemBlue,
+          backgroundColor: AppTheme.kIndigo,
           duration: const Duration(seconds: 2),
         ),
       );
@@ -238,10 +244,15 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final textbooks = TextbookRegistry.all
         .map((t) => TextbookDropdownOption(value: t.id, label: t.name))
         .toList();
     final totalDays = _totalDays();
+    final accent = isDark ? AppTheme.kIndigoLight : AppTheme.kIndigo;
+    final cardColor = isDark ? AppTheme.kCardDark : AppTheme.kCardLight;
+    final textColor = isDark ? AppTheme.kTextDark : AppTheme.kTextLight;
+    const secondaryColor = AppTheme.kSecondaryTextLight;
 
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
@@ -251,264 +262,186 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
       child: Material(
         color: Colors.transparent,
         child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '今日学习',
-                    style: theme.textTheme.displayMedium?.copyWith(
-                      color: theme.colorScheme.onSurface,
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '完成今天的听说读写任务，保持学习节奏。',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.58),
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
+          children: [
+            // 1. 大标题 + 副标题
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: TextbookDropdown(
-                        options: textbooks,
-                        value: TextbookService.instance.currentId,
-                        onChanged: _onTextbookChanged,
+                    Text(
+                      '今日学习',
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.5,
+                        color: textColor,
+                        decoration: TextDecoration.none,
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(height: 6),
                     Text(
-                      _today,
-                      style: TextStyle(
-                        fontSize: 13,
+                      '第$_currentDay天 · ${TextbookService.instance.current.name}',
+                      style: const TextStyle(
+                        fontSize: 15,
                         fontWeight: FontWeight.w400,
-                        color: theme.colorScheme.onSurface.withOpacity(0.4),
+                        color: secondaryColor,
+                        decoration: TextDecoration.none,
                       ),
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
-          SizedBox(
-            height: 52,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: totalDays,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
-              itemBuilder: (_, i) {
-                final day = i + 1;
-                final selected = day == _currentDay;
-                return GestureDetector(
-                  onTap: () => _onDayChanged(day),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    curve: Curves.easeOut,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 18, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
+            // 2. 教材下拉
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+              child: TextbookDropdown(
+                options: textbooks,
+                value: TextbookService.instance.currentId,
+                onChanged: _onTextbookChanged,
+              ),
+            ),
+            // 3. 天数 chips（水平滚动）
+            SizedBox(
+              height: 36,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: totalDays,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (_, i) {
+                  final day = i + 1;
+                  final selected = day == _currentDay;
+                  return GestureDetector(
+                    onTap: () => _onDayChanged(day),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      curve: Curves.easeOut,
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: selected ? accent : cardColor,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: selected
+                            ? null
+                            : [
+                                BoxShadow(
+                                  color: Colors.black
+                                      .withOpacity(isDark ? 0.22 : 0.05),
+                                  blurRadius: 10,
+                                  spreadRadius: -3,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                      ),
                       child: Text(
                         '第$day天',
                         style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                          color: selected
-                              ? Colors.white
-                              : theme.colorScheme.onSurface,
+                          fontSize: 14,
+                          fontWeight:
+                              selected ? FontWeight.w600 : FontWeight.w500,
+                          color: selected ? Colors.white : textColor,
+                          decoration: TextDecoration.none,
                         ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: _loading
-                ? const Center(child: CupertinoActivityIndicator())
-                : _buildTaskArea(theme),
-          ),
-        ],
+            const SizedBox(height: 16),
+            // 4-8. 任务区
+            Expanded(
+              child: _loading
+                  ? const Center(child: CupertinoActivityIndicator())
+                  : _buildTaskArea(),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildTaskArea(ThemeData theme) {
+  Widget _buildTaskArea() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    const secondaryColor = AppTheme.kSecondaryTextLight;
     final dayLessons = _dayLessons;
+
     if (dayLessons.isEmpty) {
       return Center(
         child: Text(
           '暂无课程数据',
           style: TextStyle(
-            color: theme.colorScheme.onSurface.withOpacity(0.4),
+            fontSize: 15,
+            color: secondaryColor,
+            decoration: TextDecoration.none,
           ),
         ),
       );
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 140),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
       children: [
-        LiquidGlassCard(
-          margin: const EdgeInsets.only(bottom: 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '$_currentDay',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '第$_currentDay天',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${TextbookService.instance.current.name} · ${dayLessons.map((l) => 'L${l.number}（${l.isNew ? "新课" : "复习"}）').join(' + ')}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: theme.colorScheme.onSurface.withOpacity(0.5),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              ...dayLessons.map((l) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: l.isNew
-                                ? AppTheme.kSystemTeal.withOpacity(0.12)
-                                : AppTheme.kSystemOrange.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'L${l.number} · ${l.isNew ? "新课" : "复习"}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: l.isNew
-                                  ? AppTheme.kSystemTeal
-                                  : AppTheme.kSystemOrange,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            l.title,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: theme.colorScheme.onSurface.withOpacity(0.6),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )),
-            ],
-          ),
-        ),
+        // 4. 天信息卡
+        _buildDayInfoCard(dayLessons),
+        const SizedBox(height: 12),
 
+        // 5. 任务区段
         _buildSection(
-          theme: theme,
-          icon: CupertinoIcons.headphones,
-          title: '预习任务',
+          icon: CupertinoIcons.book,
+          title: '预习',
           labels: kPreviewTaskLabels,
           states: _preview,
           section: 0,
         ),
+        const SizedBox(height: 12),
         _buildSection(
-          theme: theme,
-          icon: CupertinoIcons.film,
+          icon: CupertinoIcons.play_circle_fill,
           title: '正式学习',
           labels: kFormalTaskLabels,
           states: _formal,
           section: 1,
-          extra: Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: CupertinoTextField(
-              controller: _imitationCtrl,
-              maxLines: 3,
-              placeholder: '在此仿写本课句型句子…',
-              padding: const EdgeInsets.all(16),
-              onChanged: (_) => _debouncedSave(),
-            ),
-          ),
         ),
+        const SizedBox(height: 12),
         _buildSection(
-          theme: theme,
-          icon: CupertinoIcons.arrow_2_circlepath,
-          title: '复习任务',
+          icon: CupertinoIcons.arrow_clockwise,
+          title: '复习',
           labels: kReviewTaskLabels,
           states: _review,
           section: 2,
         ),
 
-        const SizedBox(height: 16),
+        // 6. 仿写句子
+        const SizedBox(height: 12),
+        _buildSentenceCard(isDark),
+
+        // 7. 完成今日打卡
+        const SizedBox(height: 20),
+        DuolingoButton(
+          label: '完成今日打卡',
+          variant: DuolingoButtonVariant.primary,
+          onPressed: _immediateSave,
+        ),
+
+        // 8. 自动保存指示
+        const SizedBox(height: 14),
         Center(
-          child: Text(
-            _isSaving ? '保存中…' : '已自动保存',
-            style: TextStyle(
-              fontSize: 12,
-              color: theme.colorScheme.onSurface.withOpacity(0.35),
+          child: Opacity(
+            opacity: 0.6,
+            child: Text(
+              _isSaving ? '保存中…' : '已自动保存',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: secondaryColor,
+                decoration: TextDecoration.none,
+              ),
             ),
           ),
         ),
@@ -516,50 +449,173 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
     );
   }
 
+  Widget _buildDayInfoCard(List<Lesson> dayLessons) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final textColor = isDark ? AppTheme.kTextDark : AppTheme.kTextLight;
+    const secondaryColor = AppTheme.kSecondaryTextLight;
+
+    return LiquidGlassCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '第$_currentDay天',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '共 ${dayLessons.length} 节课',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: secondaryColor,
+            ),
+          ),
+          const SizedBox(height: 16),
+          for (int i = 0; i < dayLessons.length; i++)
+            Padding(
+              padding: EdgeInsets.only(
+                  bottom: i == dayLessons.length - 1 ? 0 : 10),
+              child: Row(
+                children: [
+                  _lessonTag(dayLessons[i], isDark),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'L${dayLessons[i].number} · ${dayLessons[i].title}',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w400,
+                        color: textColor,
+                        decoration: TextDecoration.none,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _lessonTag(Lesson l, bool isDark) {
+    final accent = isDark ? AppTheme.kIndigoLight : AppTheme.kIndigo;
+    final isNew = l.isNew;
+    final bg = isNew
+        ? accent.withOpacity(0.12)
+        : AppTheme.kSecondaryTextLight.withOpacity(0.12);
+    final fg = isNew ? accent : AppTheme.kSecondaryTextLight;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        isNew ? '新课' : '复习',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: fg,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSentenceCard(bool isDark) {
+    final textColor = isDark ? AppTheme.kTextDark : AppTheme.kTextLight;
+    const secondaryColor = AppTheme.kSecondaryTextLight;
+    return LiquidGlassCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '仿写句子',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            '仿写本课句型，巩固表达',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: secondaryColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+          CupertinoTextField(
+            controller: _imitationCtrl,
+            maxLines: 3,
+            placeholder: '在此仿写本课句型句子…',
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? const Color(0xFF2C2C2E)
+                  : const Color(0xFFF2F2F7),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            onChanged: (_) => _debouncedSave(),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSection({
-    required ThemeData theme,
     required IconData icon,
     required String title,
     required List<String> labels,
     required List<bool> states,
     required int section,
-    Widget? extra,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final accent = isDark ? AppTheme.kIndigoLight : AppTheme.kIndigo;
+    final textColor = isDark ? AppTheme.kTextDark : AppTheme.kTextLight;
+    const secondaryColor = AppTheme.kSecondaryTextLight;
+
     final doneCount = states.where((e) => e).length;
+    final allDone = doneCount == labels.length;
+
     return LiquidGlassCard(
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 22, color: theme.colorScheme.primary),
+              Icon(icon, size: 22, color: accent),
               const SizedBox(width: 10),
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 18,
+                style: TextStyle(
+                  fontSize: 17,
                   fontWeight: FontWeight.w600,
+                  color: textColor,
                 ),
               ),
               const Spacer(),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: doneCount == labels.length
-                      ? AppTheme.kSystemGreen.withOpacity(0.12)
-                      : theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '$doneCount/${labels.length}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: doneCount == labels.length
-                        ? AppTheme.kSystemGreen
-                        : theme.colorScheme.onSurface.withOpacity(0.5),
-                  ),
+              Text(
+                '$doneCount/${labels.length}',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: allDone ? AppTheme.kSuccess : secondaryColor,
                 ),
               ),
             ],
@@ -567,14 +623,14 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
           const SizedBox(height: 14),
           for (int i = 0; i < labels.length; i++)
             Padding(
-              padding: EdgeInsets.only(bottom: i == labels.length - 1 ? 0 : 4),
+              padding: EdgeInsets.only(
+                  bottom: i == labels.length - 1 ? 0 : 4),
               child: TaskCheckbox(
                 label: labels[i],
                 value: states[i],
                 onChanged: (v) => _onTaskToggle(section, i, v),
               ),
             ),
-          if (extra != null) extra,
         ],
       ),
     );

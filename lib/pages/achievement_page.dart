@@ -8,7 +8,7 @@ import '../theme/app_theme.dart';
 import '../widgets/liquid_glass_card.dart';
 import '../widgets/theme_toggle_button.dart';
 
-/// 成就徽章页（iOS 原生风格）
+/// 成就徽章页（Modern Clean 风格）
 class AchievementPage extends StatefulWidget {
   const AchievementPage({super.key});
 
@@ -21,6 +21,10 @@ class _AchievementPageState extends State<AchievementPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final textColor =
+        isDark ? AppTheme.kTextDark : AppTheme.kTextLight;
+    final secondaryColor = AppTheme.kSecondaryTextLight;
+
     final all = StorageService.instance.allCheckins();
     final streak = AchievementEvaluator.currentStreak(all);
     final total = AchievementEvaluator.totalDays(all);
@@ -37,190 +41,197 @@ class _AchievementPageState extends State<AchievementPage> {
       child: Material(
         color: Colors.transparent,
         child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 140),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 10, 4, 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '打卡挑战',
-                  style: theme.textTheme.displayMedium?.copyWith(
-                    color: theme.colorScheme.onSurface,
-                    decoration: TextDecoration.none,
-                  ),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+          children: [
+            // 1. 大标题
+            Padding(
+              padding: const EdgeInsets.only(top: 10, bottom: 20),
+              child: Text(
+                '成就',
+                style: TextStyle(
+                  fontSize: 34,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                  color: textColor,
+                  decoration: TextDecoration.none,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  '查看连续学习、累计打卡和已解锁徽章。',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.58),
-                    decoration: TextDecoration.none,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-          LiquidGlassCard(
-            margin: const EdgeInsets.only(bottom: 16),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _bigStat(
-                        theme: theme,
-                        value: '$streak',
-                        label: '当前连续（天）',
-                        color: AppTheme.kSystemTeal,
-                        icon: CupertinoIcons.flame,
+
+            // 2. 统计卡（2x2 网格）
+            LiquidGlassCard(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _statCell(
+                          icon: CupertinoIcons.flame_fill,
+                          iconColor: AppTheme.kIndigo,
+                          value: '$streak',
+                          valueColor: AppTheme.kIndigo,
+                          label: '当前连续',
+                          secondaryColor: secondaryColor,
+                        ),
                       ),
-                    ),
-                    Container(
-                        width: 1,
-                        height: 48,
-                        color: theme.colorScheme.outline.withOpacity(0.12)),
-                    Expanded(
-                      child: _bigStat(
-                        theme: theme,
-                        value: '$total',
-                        label: '累计打卡（天）',
-                        color: AppTheme.kSystemGreen,
-                        icon: CupertinoIcons.calendar,
+                      Expanded(
+                        child: _statCell(
+                          icon: CupertinoIcons.calendar,
+                          iconColor: secondaryColor,
+                          value: '$total',
+                          valueColor: textColor,
+                          label: '累计打卡',
+                          secondaryColor: secondaryColor,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _bigStat(
-                        theme: theme,
-                        value: '${unlockedMap.length}',
-                        label: '已解锁',
-                        color: AppTheme.kSystemYellow,
-                        icon: CupertinoIcons.rosette,
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _statCell(
+                          icon: CupertinoIcons.checkmark_seal_fill,
+                          iconColor: secondaryColor,
+                          value: '${unlockedMap.length}',
+                          valueColor: textColor,
+                          label: '已解锁',
+                          secondaryColor: secondaryColor,
+                        ),
                       ),
-                    ),
-                    Container(
-                        width: 1,
-                        height: 48,
-                        color: theme.colorScheme.outline.withOpacity(0.12)),
-                    Expanded(
-                      child: _bigStat(
-                        theme: theme,
-                        value: '${kAchievements.length}',
-                        label: '徽章总数',
-                        color: AppTheme.kSystemPurple,
-                        icon: CupertinoIcons.star_fill,
+                      Expanded(
+                        child: _statCell(
+                          icon: CupertinoIcons.rosette,
+                          iconColor: secondaryColor,
+                          value: '${kAchievements.length}',
+                          valueColor: textColor,
+                          label: '总成就',
+                          secondaryColor: secondaryColor,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          ...kAchievements.map((def) => _buildAchievementCard(
-                theme: theme,
-                isDark: isDark,
-                def: def,
-                unlockedAt: unlockedMap[def.id],
-                all: all,
-              )),
-        ],
+
+            // 3. 我的徽章 标题
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 12),
+              child: Text(
+                '我的徽章',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ),
+
+            // 4. 成就卡片
+            ...kAchievements.map((def) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildAchievementCard(
+                    isDark: isDark,
+                    def: def,
+                    unlockedAt: unlockedMap[def.id],
+                    all: all,
+                    textColor: textColor,
+                    secondaryColor: secondaryColor,
+                  ),
+                )),
+          ],
         ),
       ),
     );
   }
 
-  Widget _bigStat({
-    required ThemeData theme,
-    required String value,
-    required String label,
-    required Color color,
+  /// 统计单元：图标(20) + 数字(36 w800) + 标签(13 secondary)
+  Widget _statCell({
     required IconData icon,
+    required Color iconColor,
+    required String value,
+    required Color valueColor,
+    required String label,
+    required Color secondaryColor,
   }) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: color, size: 24),
-        const SizedBox(height: 6),
+        Icon(icon, color: iconColor, size: 20),
+        const SizedBox(height: 8),
         Text(
           value,
           style: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.w700,
-            color: color,
+            fontSize: 36,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -1.0,
+            color: valueColor,
+            decoration: TextDecoration.none,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: theme.colorScheme.onSurface.withOpacity(0.5),
+            color: secondaryColor,
+            decoration: TextDecoration.none,
           ),
-          textAlign: TextAlign.center,
         ),
       ],
     );
   }
 
   Widget _buildAchievementCard({
-    required ThemeData theme,
     required bool isDark,
     required AchievementDef def,
     required String? unlockedAt,
     required List<LessonCheckin> all,
+    required Color textColor,
+    required Color secondaryColor,
   }) {
     final unlocked = unlockedAt != null;
     final progress = _progressOf(def, all);
+    final accent = isDark ? AppTheme.kIndigoLight : AppTheme.kIndigo;
+    final grayCircle =
+        isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA);
 
     return LiquidGlassCard(
+      padding: const EdgeInsets.all(16),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            width: 60,
-            height: 60,
+          // 徽章圆形图标
+          Container(
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: unlocked
-                  ? SweepGradient(
-                      colors: [
-                        AppTheme.kSystemBlue,
-                        AppTheme.kSystemPurple,
-                        AppTheme.kSystemPink,
-                        AppTheme.kSystemOrange,
-                        AppTheme.kSystemBlue,
-                      ],
+                  ? LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [accent, AppTheme.kIndigo],
                     )
                   : null,
-              color: unlocked
-                  ? null
-                  : (isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA)),
-              boxShadow: unlocked
-                  ? [
-                      BoxShadow(
-                        color: AppTheme.kSystemBlue.withOpacity(0.2),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ]
-                  : null,
+              color: unlocked ? null : grayCircle,
             ),
             alignment: Alignment.center,
             child: Opacity(
-              opacity: unlocked ? 1.0 : 0.35,
+              opacity: unlocked ? 1.0 : 0.3,
               child: Text(
                 def.emoji,
-                style: const TextStyle(fontSize: 30),
+                style: const TextStyle(fontSize: 32),
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
+          // 右侧内容
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,15 +245,31 @@ class _AchievementPageState extends State<AchievementPage> {
                           fontSize: 17,
                           fontWeight: FontWeight.w600,
                           color: unlocked
-                              ? theme.colorScheme.onSurface
-                              : theme.colorScheme.onSurface.withOpacity(0.5),
+                              ? textColor
+                              : textColor.withOpacity(0.5),
+                          decoration: TextDecoration.none,
                         ),
                       ),
                     ),
                     if (unlocked) ...[
                       const SizedBox(width: 8),
-                      Icon(CupertinoIcons.checkmark_circle_fill,
-                          color: AppTheme.kSystemGreen, size: 18),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppTheme.kSuccess.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          '已解锁',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.kSuccess,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -250,22 +277,36 @@ class _AchievementPageState extends State<AchievementPage> {
                 Text(
                   def.desc,
                   style: TextStyle(
-                    fontSize: 14,
-                    color: theme.colorScheme.onSurface.withOpacity(0.55),
+                    fontSize: 13,
+                    color: unlocked
+                        ? secondaryColor
+                        : secondaryColor.withOpacity(0.5),
+                    decoration: TextDecoration.none,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 if (unlocked)
                   Text(
                     '解锁于 $unlockedAt',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: AppTheme.kSystemGreen,
+                      color: AppTheme.kSuccess,
+                      decoration: TextDecoration.none,
                     ),
                   )
                 else if (progress != null)
-                  _progressBar(theme, progress.$1, progress.$2),
+                  _progressBar(progress.$1, progress.$2, accent, secondaryColor)
+                else
+                  Text(
+                    '未达成',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: secondaryColor.withOpacity(0.5),
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -274,7 +315,13 @@ class _AchievementPageState extends State<AchievementPage> {
     );
   }
 
-  Widget _progressBar(ThemeData theme, int current, int target) {
+  /// 进度条：灰色背景 + Indigo 填充
+  Widget _progressBar(
+    int current,
+    int target,
+    Color accent,
+    Color secondaryColor,
+  ) {
     final ratio = target == 0 ? 0.0 : (current / target).clamp(0.0, 1.0);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -283,19 +330,19 @@ class _AchievementPageState extends State<AchievementPage> {
           borderRadius: BorderRadius.circular(3),
           child: LinearProgressIndicator(
             value: ratio,
-            minHeight: 4,
-            backgroundColor: theme.colorScheme.surface,
-            valueColor:
-                AlwaysStoppedAnimation(theme.colorScheme.primary),
+            minHeight: 5,
+            backgroundColor: AppTheme.kSeparatorLight,
+            valueColor: AlwaysStoppedAnimation(accent),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 5),
         Text(
           '$current / $target',
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w500,
-            color: theme.colorScheme.onSurface.withOpacity(0.4),
+            color: secondaryColor.withOpacity(0.6),
+            decoration: TextDecoration.none,
           ),
         ),
       ],

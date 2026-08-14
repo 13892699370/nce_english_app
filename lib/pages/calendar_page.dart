@@ -68,8 +68,11 @@ class _CalendarPageState extends State<CalendarPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? AppTheme.kTextDark : AppTheme.kTextLight;
+    final secondaryColor = AppTheme.kSecondaryTextLight;
+    final accent = isDark ? AppTheme.kIndigoLight : AppTheme.kIndigo;
+
     final textbooks = TextbookRegistry.all
         .map((t) => TextbookDropdownOption(value: t.id, label: t.name))
         .toList();
@@ -84,31 +87,24 @@ class _CalendarPageState extends State<CalendarPage> {
       child: Material(
         color: Colors.transparent,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 140),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
           children: [
+            // 1. 大标题
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 10, 4, 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '学习日历',
-                    style: theme.textTheme.displayMedium?.copyWith(
-                      color: theme.colorScheme.onSurface,
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '回看历史打卡，只读查看当天任务和仿写记录。',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.58),
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                ],
+              padding: const EdgeInsets.only(top: 10, bottom: 16),
+              child: Text(
+                '学习日历',
+                style: TextStyle(
+                  fontSize: 34,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                  color: textColor,
+                  decoration: TextDecoration.none,
+                ),
               ),
             ),
+
+            // 2. 教材下拉
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: TextbookDropdown(
@@ -120,13 +116,26 @@ class _CalendarPageState extends State<CalendarPage> {
                 },
               ),
             ),
+
+            // 3. 日历卡
             LiquidGlassCard(
               margin: const EdgeInsets.only(bottom: 16),
-              child: _buildCalendar(theme, isDark, checkinMap, today),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+              child: _buildCalendar(
+                checkinMap,
+                today,
+                textColor,
+                secondaryColor,
+                accent,
+              ),
             ),
-            _buildLegend(theme, isDark),
-            const SizedBox(height: 18),
-            _buildStats(theme, isDark, checkinMap),
+
+            // 4. 图例
+            _buildLegend(secondaryColor, accent),
+            const SizedBox(height: 16),
+
+            // 5. 月度统计卡
+            _buildStats(checkinMap, textColor, secondaryColor),
           ],
         ),
       ),
@@ -134,10 +143,11 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   Widget _buildCalendar(
-    ThemeData theme,
-    bool isDark,
     Map<String, LessonCheckin> checkinMap,
     String today,
+    Color textColor,
+    Color secondaryColor,
+    Color accent,
   ) {
     const weekLabels = ['日', '一', '二', '三', '四', '五', '六'];
     final year = _focusedMonth.year;
@@ -149,42 +159,47 @@ class _CalendarPageState extends State<CalendarPage> {
 
     return Column(
       children: [
+        // 月份头 + 翻页箭头
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             GestureDetector(
               onTap: _prevMonth,
-              child: Container(
-                padding: const EdgeInsets.all(10),
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
                 child: Icon(
                   CupertinoIcons.chevron_left,
-                  size: 22,
-                  color: theme.colorScheme.primary,
+                  size: 20,
+                  color: accent,
                 ),
               ),
             ),
             Text(
               monthLabel,
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 17,
                 fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurface,
+                color: textColor,
+                decoration: TextDecoration.none,
               ),
             ),
             GestureDetector(
               onTap: _nextMonth,
-              child: Container(
-                padding: const EdgeInsets.all(10),
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
                 child: Icon(
                   CupertinoIcons.chevron_right,
-                  size: 22,
-                  color: theme.colorScheme.primary,
+                  size: 20,
+                  color: accent,
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
+        // 星期标签
         Row(
           children: weekLabels
               .map((w) => Expanded(
@@ -193,8 +208,9 @@ class _CalendarPageState extends State<CalendarPage> {
                         w,
                         style: TextStyle(
                           fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSurface.withOpacity(0.4),
+                          fontWeight: FontWeight.w500,
+                          color: secondaryColor,
+                          decoration: TextDecoration.none,
                         ),
                       ),
                     ),
@@ -202,6 +218,7 @@ class _CalendarPageState extends State<CalendarPage> {
               .toList(),
         ),
         const SizedBox(height: 10),
+        // 日期网格
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -227,56 +244,14 @@ class _CalendarPageState extends State<CalendarPage> {
               onTap: checkin != null
                   ? () => _showCheckinDetail(checkin)
                   : null,
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isToday
-                      ? theme.colorScheme.primary.withOpacity(0.12)
-                      : (allDone
-                          ? AppTheme.kSystemGreen.withOpacity(0.10)
-                          : (partial
-                              ? AppTheme.kSystemOrange.withOpacity(0.10)
-                              : Colors.transparent)),
-                  border: isToday
-                      ? Border.all(
-                          color: theme.colorScheme.primary, width: 1.5)
-                      : null,
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '$day',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
-                        color: isToday
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    if (allDone)
-                      Container(
-                        width: 6,
-                        height: 6,
-                        margin: const EdgeInsets.only(top: 2),
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppTheme.kSystemGreen,
-                        ),
-                      )
-                    else if (partial)
-                      Container(
-                        width: 6,
-                        height: 6,
-                        margin: const EdgeInsets.only(top: 2),
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppTheme.kSystemOrange,
-                        ),
-                      ),
-                  ],
-                ),
+              child: _buildDayCell(
+                day: day,
+                isToday: isToday,
+                allDone: allDone,
+                partial: partial,
+                textColor: textColor,
+                secondaryColor: secondaryColor,
+                accent: accent,
               ),
             );
           },
@@ -285,85 +260,197 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
 
-  Widget _buildLegend(ThemeData theme, bool isDark) {
+  /// 单个日期格：今日/全部完成/部分完成/无打卡
+  Widget _buildDayCell({
+    required int day,
+    required bool isToday,
+    required bool allDone,
+    required bool partial,
+    required Color textColor,
+    required Color secondaryColor,
+    required Color accent,
+  }) {
+    final String dayText = '$day';
+    final TextStyle dayStyle = TextStyle(
+      fontSize: 15,
+      fontWeight: isToday || allDone || partial
+          ? FontWeight.w600
+          : FontWeight.w400,
+      decoration: TextDecoration.none,
+    );
+
+    if (allDone) {
+      return Container(
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppTheme.kSuccess,
+        ),
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              dayText,
+              style: dayStyle.copyWith(color: Colors.white),
+            ),
+            Container(
+              width: 4,
+              height: 4,
+              margin: const EdgeInsets.only(top: 2),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.85),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (partial) {
+      return Container(
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppTheme.kWarning,
+        ),
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              dayText,
+              style: dayStyle.copyWith(color: Colors.white),
+            ),
+            Container(
+              width: 4,
+              height: 4,
+              margin: const EdgeInsets.only(top: 2),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.85),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (isToday) {
+      return Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: accent.withOpacity(0.12),
+          border: Border.all(color: accent, width: 1.5),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          dayText,
+          style: dayStyle.copyWith(color: accent),
+        ),
+      );
+    }
+
+    return Container(
+      alignment: Alignment.center,
+      child: Text(
+        dayText,
+        style: dayStyle.copyWith(color: secondaryColor),
+      ),
+    );
+  }
+
+  /// 图例：已全部完成 / 部分完成 / 今天
+  Widget _buildLegend(Color secondaryColor, Color accent) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _legendDot(theme, AppTheme.kSystemGreen, '全部完成'),
-        const SizedBox(width: 22),
-        _legendDot(theme, AppTheme.kSystemOrange, '部分完成'),
-        const SizedBox(width: 22),
-        _legendDot(theme, const Color(0xFF8E8E93), '未打卡'),
+        _legendDot(AppTheme.kSuccess, '已全部完成', secondaryColor),
+        const SizedBox(width: 20),
+        _legendDot(AppTheme.kWarning, '部分完成', secondaryColor),
+        const SizedBox(width: 20),
+        _legendDot(accent, '今天', secondaryColor, isRing: true),
       ],
     );
   }
 
-  Widget _legendDot(ThemeData theme, Color color, String label) {
+  Widget _legendDot(
+    Color color,
+    String label,
+    Color secondaryColor, {
+    bool isRing = false,
+  }) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isRing ? color.withOpacity(0.12) : color,
+            border: isRing ? Border.all(color: color, width: 1.5) : null,
+          ),
         ),
-        const SizedBox(width: 7),
+        const SizedBox(width: 6),
         Text(
           label,
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: theme.colorScheme.onSurface.withOpacity(0.5),
+            color: secondaryColor,
+            decoration: TextDecoration.none,
           ),
         ),
       ],
     );
   }
 
+  /// 月度统计卡：总打卡天数 / 全部完成天数 / 部分完成天数
   Widget _buildStats(
-    ThemeData theme,
-    bool isDark,
     Map<String, LessonCheckin> checkinMap,
+    Color textColor,
+    Color secondaryColor,
   ) {
     final total = checkinMap.length;
     final allDone = checkinMap.values.where((c) => c.isAllDone).length;
     final partial = total - allDone;
 
     return LiquidGlassCard(
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
       child: Row(
         children: [
           Expanded(
             child: _statItem(
-              theme,
               '$total',
-              '总打卡',
-              AppTheme.kSystemBlue,
+              '总打卡天数',
+              textColor,
+              secondaryColor,
             ),
           ),
           Container(
             width: 1,
-            height: 48,
-            color: theme.colorScheme.outline.withOpacity(0.12),
+            height: 40,
+            color: AppTheme.kSeparatorLight,
           ),
           Expanded(
             child: _statItem(
-              theme,
               '$allDone',
-              '全部完成',
-              AppTheme.kSystemGreen,
+              '全部完成天数',
+              textColor,
+              secondaryColor,
             ),
           ),
           Container(
             width: 1,
-            height: 48,
-            color: theme.colorScheme.outline.withOpacity(0.12),
+            height: 40,
+            color: AppTheme.kSeparatorLight,
           ),
           Expanded(
             child: _statItem(
-              theme,
               '$partial',
-              '部分完成',
-              AppTheme.kSystemOrange,
+              '部分完成天数',
+              textColor,
+              secondaryColor,
             ),
           ),
         ],
@@ -372,37 +459,45 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   Widget _statItem(
-    ThemeData theme,
     String value,
     String label,
-    Color color,
+    Color textColor,
+    Color secondaryColor,
   ) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           value,
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w700,
-            color: color,
+            color: textColor,
+            decoration: TextDecoration.none,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           label,
+          textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: theme.colorScheme.onSurface.withOpacity(0.5),
+            color: secondaryColor,
+            decoration: TextDecoration.none,
           ),
         ),
       ],
     );
   }
 
+  /// 日期详情底部弹层：干净的 ModalBottomSheet，无玻璃层
   void _showCheckinDetail(LessonCheckin checkin) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? AppTheme.kTextDark : AppTheme.kTextLight;
+    final secondaryColor = AppTheme.kSecondaryTextLight;
+    final accent = isDark ? AppTheme.kIndigoLight : AppTheme.kIndigo;
+    final sheetBg = isDark ? AppTheme.kCardDark : AppTheme.kCardLight;
     final lessons = TextbookRegistry.lessonsOfDay(_textbookId, checkin.dayNumber);
     final textbookName = TextbookRegistry.byId(_textbookId).name;
 
@@ -413,8 +508,8 @@ class _CalendarPageState extends State<CalendarPage> {
       builder: (_) => Container(
         height: MediaQuery.of(context).size.height * 0.75,
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.kCardBgDark : AppTheme.kCardBgLight,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          color: sheetBg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
           children: [
@@ -423,7 +518,7 @@ class _CalendarPageState extends State<CalendarPage> {
               width: 36,
               height: 5,
               decoration: BoxDecoration(
-                color: theme.colorScheme.outline.withOpacity(0.25),
+                color: secondaryColor.withOpacity(0.25),
                 borderRadius: BorderRadius.circular(3),
               ),
             ),
@@ -433,14 +528,11 @@ class _CalendarPageState extends State<CalendarPage> {
               child: Row(
                 children: [
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
-                      color: (checkin.isAllDone
-                              ? AppTheme.kSystemGreen
-                              : AppTheme.kSystemOrange)
-                          .withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(10),
+                      color: accent.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     alignment: Alignment.center,
                     child: Text(
@@ -448,9 +540,8 @@ class _CalendarPageState extends State<CalendarPage> {
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: checkin.isAllDone
-                            ? AppTheme.kSystemGreen
-                            : AppTheme.kSystemOrange,
+                        color: accent,
+                        decoration: TextDecoration.none,
                       ),
                     ),
                   ),
@@ -464,7 +555,8 @@ class _CalendarPageState extends State<CalendarPage> {
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w600,
-                            color: theme.colorScheme.onSurface,
+                            color: textColor,
+                            decoration: TextDecoration.none,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -472,7 +564,8 @@ class _CalendarPageState extends State<CalendarPage> {
                           checkin.date,
                           style: TextStyle(
                             fontSize: 13,
-                            color: theme.colorScheme.onSurface.withOpacity(0.5),
+                            color: secondaryColor,
+                            decoration: TextDecoration.none,
                           ),
                         ),
                       ],
@@ -483,8 +576,8 @@ class _CalendarPageState extends State<CalendarPage> {
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       color: (checkin.isAllDone
-                              ? AppTheme.kSystemGreen
-                              : AppTheme.kSystemOrange)
+                              ? AppTheme.kSuccess
+                              : AppTheme.kWarning)
                           .withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -494,8 +587,9 @@ class _CalendarPageState extends State<CalendarPage> {
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: checkin.isAllDone
-                            ? AppTheme.kSystemGreen
-                            : AppTheme.kSystemOrange,
+                            ? AppTheme.kSuccess
+                            : AppTheme.kWarning,
+                        decoration: TextDecoration.none,
                       ),
                     ),
                   ),
@@ -513,7 +607,8 @@ class _CalendarPageState extends State<CalendarPage> {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        color: secondaryColor,
+                        decoration: TextDecoration.none,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -526,8 +621,8 @@ class _CalendarPageState extends State<CalendarPage> {
                                     horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: l.isNew
-                                      ? AppTheme.kSystemTeal.withOpacity(0.12)
-                                      : AppTheme.kSystemOrange.withOpacity(0.12),
+                                      ? accent.withOpacity(0.12)
+                                      : AppTheme.kWarning.withOpacity(0.12),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
@@ -536,8 +631,9 @@ class _CalendarPageState extends State<CalendarPage> {
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
                                     color: l.isNew
-                                        ? AppTheme.kSystemTeal
-                                        : AppTheme.kSystemOrange,
+                                        ? accent
+                                        : AppTheme.kWarning,
+                                    decoration: TextDecoration.none,
                                   ),
                                 ),
                               ),
@@ -547,8 +643,8 @@ class _CalendarPageState extends State<CalendarPage> {
                                   l.title,
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: theme.colorScheme.onSurface
-                                        .withOpacity(0.7),
+                                    color: textColor.withOpacity(0.7),
+                                    decoration: TextDecoration.none,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -560,17 +656,19 @@ class _CalendarPageState extends State<CalendarPage> {
                     const SizedBox(height: 16),
                   ],
                   _buildTaskList(
-                    theme,
                     '预习任务',
                     kPreviewTaskLabels,
                     checkin.previewTasks,
+                    textColor,
+                    secondaryColor,
                   ),
                   const SizedBox(height: 12),
                   _buildTaskList(
-                    theme,
                     '正式学习',
                     kFormalTaskLabels,
                     checkin.formalTasks,
+                    textColor,
+                    secondaryColor,
                   ),
                   if (checkin.imitationSentence.isNotEmpty) ...[
                     const SizedBox(height: 12),
@@ -579,7 +677,8 @@ class _CalendarPageState extends State<CalendarPage> {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        color: secondaryColor,
+                        decoration: TextDecoration.none,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -587,25 +686,27 @@ class _CalendarPageState extends State<CalendarPage> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withOpacity(0.06),
-                        borderRadius: BorderRadius.circular(10),
+                        color: accent.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         checkin.imitationSentence,
                         style: TextStyle(
                           fontSize: 15,
-                          color: theme.colorScheme.onSurface,
+                          color: textColor,
                           height: 1.5,
+                          decoration: TextDecoration.none,
                         ),
                       ),
                     ),
                   ],
                   const SizedBox(height: 12),
                   _buildTaskList(
-                    theme,
                     '复习任务',
                     kReviewTaskLabels,
                     checkin.reviewTasks,
+                    textColor,
+                    secondaryColor,
                   ),
                 ],
               ),
@@ -617,10 +718,11 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   Widget _buildTaskList(
-    ThemeData theme,
     String title,
     List<String> labels,
     List<bool> states,
+    Color textColor,
+    Color secondaryColor,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -630,7 +732,8 @@ class _CalendarPageState extends State<CalendarPage> {
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            color: theme.colorScheme.onSurface.withOpacity(0.6),
+            color: secondaryColor,
+            decoration: TextDecoration.none,
           ),
         ),
         const SizedBox(height: 6),
@@ -645,8 +748,8 @@ class _CalendarPageState extends State<CalendarPage> {
                       : CupertinoIcons.circle,
                   size: 18,
                   color: states[i]
-                      ? AppTheme.kSystemGreen
-                      : const Color(0xFF8E8E93).withOpacity(0.4),
+                      ? AppTheme.kSuccess
+                      : secondaryColor.withOpacity(0.4),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -655,8 +758,9 @@ class _CalendarPageState extends State<CalendarPage> {
                     style: TextStyle(
                       fontSize: 14,
                       color: states[i]
-                          ? theme.colorScheme.onSurface
-                          : theme.colorScheme.onSurface.withOpacity(0.4),
+                          ? textColor
+                          : textColor.withOpacity(0.4),
+                      decoration: TextDecoration.none,
                     ),
                   ),
                 ),

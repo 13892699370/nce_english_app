@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../data/textbook_registry.dart';
@@ -14,10 +13,10 @@ import '../utils/date_util.dart';
 import '../widgets/liquid_glass_card.dart';
 import '../widgets/duolingo_button.dart';
 import '../widgets/textbook_dropdown.dart';
-import '../widgets/day_wheel_picker.dart';
 import '../widgets/theme_toggle_button.dart';
 
-/// 单词学习页（iOS 原生风格）
+/// 单词学习页（Modern Clean 风格）
+/// 灵感来源：Apple Fitness / Things 3 / Streaks
 class WordLearningPage extends StatefulWidget {
   const WordLearningPage({super.key});
 
@@ -109,16 +108,17 @@ class _WordLearningPageState extends State<WordLearningPage> {
           .where((w) => w.needReview)
           .length;
 
+  int get _mastered =>
+      StorageService.instance
+          .wordsOf(TextbookService.instance.currentId)
+          .where((w) => w.learned && !w.needReview)
+          .length;
+
   int get _notebookCount =>
       StorageService.instance
           .wordsOf(TextbookService.instance.currentId)
           .where((w) => w.inNotebook)
           .length;
-
-  int get _totalDays {
-    final info = TextbookRegistry.byId(TextbookService.instance.currentId);
-    return info.totalDays;
-  }
 
   Future<void> _toggleSoundEffects(bool value) async {
     await AudioFeedbackService.instance.setEnabled(value);
@@ -134,6 +134,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
     if (!mounted) return;
     setState(() {});
     if (message == null) return;
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -147,6 +148,15 @@ class _WordLearningPageState extends State<WordLearningPage> {
     setState(() {
       _currentDay = StorageService.instance.currentDayOf(id);
       _showDayFilter = true;
+      _loading = true;
+    });
+    _reloadVocab();
+  }
+
+  void _setDayFilter(bool today) {
+    if (today == _showDayFilter) return;
+    setState(() {
+      _showDayFilter = today;
       _loading = true;
     });
     _reloadVocab();
@@ -193,9 +203,12 @@ class _WordLearningPageState extends State<WordLearningPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final textbooks = TextbookRegistry.all
         .map((t) => TextbookDropdownOption(value: t.id, label: t.name))
         .toList();
+    final textColor = isDark ? AppTheme.kTextDark : AppTheme.kTextLight;
+    const secondaryColor = AppTheme.kSecondaryTextLight;
 
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
@@ -205,243 +218,211 @@ class _WordLearningPageState extends State<WordLearningPage> {
       child: Material(
         color: Colors.transparent,
         child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. 大标题 + 副标题
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '单词学习',
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.5,
+                        color: textColor,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      '按天复习，听发音，标记生词。',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w400,
+                        color: secondaryColor,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // 2. 教材下拉 + 生词本 + 音效开关
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+              child: Row(
                 children: [
-                  Text(
-                    '单词训练',
-                    style: theme.textTheme.displayMedium?.copyWith(
-                      color: theme.colorScheme.onSurface,
-                      decoration: TextDecoration.none,
+                  Flexible(
+                    child: TextbookDropdown(
+                      options: textbooks,
+                      value: TextbookService.instance.currentId,
+                      onChanged: _onTextbookChanged,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '按天复习，听发音，标记生词。',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.58),
-                      decoration: TextDecoration.none,
+                  const SizedBox(width: 10),
+                  _buildNotebookChip(isDark),
+                  const SizedBox(width: 10),
+                  _buildSoundToggle(),
+                ],
+              ),
+            ),
+            // 3. 统计 chips
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _statChip(
+                      label: '今日',
+                      value: '$_todayLearned',
+                      valueColor: AppTheme.kIndigo,
+                      isDark: isDark,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _statChip(
+                      label: '待复习',
+                      value: '$_toReview',
+                      valueColor: AppTheme.kWarning,
+                      isDark: isDark,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _statChip(
+                      label: '已掌握',
+                      value: '$_mastered',
+                      valueColor: AppTheme.kSuccess,
+                      isDark: isDark,
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: () => _showNotebook(context),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.kSystemOrange.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(CupertinoIcons.book,
-                            size: 15, color: AppTheme.kSystemOrange),
-                        const SizedBox(width: 6),
-                        Text(
-                          '生词本 $_notebookCount',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.kSystemOrange,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                Icon(
-                  CupertinoIcons.speaker_2_fill,
-                  size: 17,
-                  color: theme.colorScheme.onSurface.withOpacity(0.4),
-                ),
-                const SizedBox(width: 6),
-                Transform.scale(
-                  scale: 0.85,
-                  child: CupertinoSwitch(
-                    value: AudioFeedbackService.instance.enabled,
-                    onChanged: _toggleSoundEffects,
-                  ),
-                ),
-              ],
+            // 4. 天数过滤（分段控件）
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+              child: _buildDayFilter(isDark),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: TextbookDropdown(
-              options: textbooks,
-              value: TextbookService.instance.currentId,
-              onChanged: _onTextbookChanged,
+            // 5-7. 主内容区
+            Expanded(
+              child: _loading
+                  ? const Center(child: CupertinoActivityIndicator())
+                  : _vocab.isEmpty
+                      ? _buildEmpty()
+                      : _index >= _vocab.length
+                          ? _buildComplete(isDark)
+                          : _buildWordCard(isDark),
             ),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _statChip(
-                    theme: theme,
-                    color: AppTheme.kSystemBlue,
-                    label: '今日学习',
-                    value: '$_todayLearned',
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _statChip(
-                    theme: theme,
-                    color: AppTheme.kSystemOrange,
-                    label: '待复习',
-                    value: '$_toReview',
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _statChip(
-                    theme: theme,
-                    color: AppTheme.kSystemPurple,
-                    label: '词库',
-                    value: '${_vocab.length}',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildDayFilter(theme),
-          ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: _loading
-                ? const Center(child: CupertinoActivityIndicator())
-                : _vocab.isEmpty
-                    ? _buildEmpty(theme)
-                    : _index >= _vocab.length
-                        ? _buildComplete(theme)
-                        : _buildWordCard(theme),
-          ),
-        ],
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildDayFilter(ThemeData theme) {
-    return Row(
-      children: [
-        Expanded(
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                _showDayFilter = !_showDayFilter;
-                _reloadVocab();
-              });
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: _showDayFilter
-                    ? theme.colorScheme.primary.withOpacity(0.10)
-                    : theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    CupertinoIcons.line_horizontal_3_decrease,
-                    size: 15,
-                    color: _showDayFilter
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurface.withOpacity(0.5),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _showDayFilter
-                        ? '第$_currentDay天 · L${_currentDay * 2 - 1}-L${_currentDay * 2}'
-                        : '全部单词',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: _showDayFilter
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurface.withOpacity(0.6),
-                    ),
-                  ),
-                ],
+  // —— 生词本 chip ——
+  Widget _buildNotebookChip(bool isDark) {
+    final accent = isDark ? AppTheme.kIndigoLight : AppTheme.kIndigo;
+    return GestureDetector(
+      onTap: () => _showNotebook(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: accent.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(CupertinoIcons.book, size: 15, color: accent),
+            const SizedBox(width: 6),
+            Text(
+              '生词本 $_notebookCount',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: accent,
               ),
             ),
-          ),
+          ],
         ),
-        if (_showDayFilter) ...[
-          const SizedBox(width: 10),
-          Expanded(
-            child: DayWheelPicker(
-              currentDay: _currentDay,
-              totalDays: _totalDays,
-              onChanged: (day) {
-                if (day == _currentDay) return;
-                setState(() {
-                  _currentDay = day;
-                  _loading = true;
-                });
-                _reloadVocab();
-                StorageService.instance
-                    .setCurrentDay(TextbookService.instance.currentId, day);
-              },
+      ),
+    );
+  }
+
+  // —— 音效开关（保留功能，紧凑样式） ——
+  Widget _buildSoundToggle() {
+    final enabled = AudioFeedbackService.instance.enabled;
+    return GestureDetector(
+      onTap: () => _toggleSoundEffects(!enabled),
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            enabled ? CupertinoIcons.speaker_2_fill : CupertinoIcons.speaker_slash_fill,
+            size: 17,
+            color: enabled
+                ? AppTheme.kIndigo
+                : AppTheme.kSecondaryTextLight,
+          ),
+          const SizedBox(width: 6),
+          Transform.scale(
+            scale: 0.78,
+            child: CupertinoSwitch(
+              value: enabled,
+              onChanged: _toggleSoundEffects,
             ),
           ),
         ],
-      ],
+      ),
     );
   }
 
   Widget _statChip({
-    required ThemeData theme,
-    required Color color,
     required String label,
     required String value,
+    required Color valueColor,
+    required bool isDark,
   }) {
+    final cardColor = isDark ? AppTheme.kCardDark : AppTheme.kCardLight;
+    const secondaryColor = AppTheme.kSecondaryTextLight;
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(12),
+        color: cardColor,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.22 : 0.05),
+            blurRadius: 10,
+            spreadRadius: -3,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         children: [
           Text(
             value,
             style: TextStyle(
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: color,
+              color: valueColor,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: theme.colorScheme.onSurface.withOpacity(0.5),
+              color: secondaryColor,
             ),
           ),
         ],
@@ -449,154 +430,216 @@ class _WordLearningPageState extends State<WordLearningPage> {
     );
   }
 
-  Widget _buildWordCard(ThemeData theme) {
+  // —— 分段控件：今日 / 全部 ——
+  Widget _buildDayFilter(bool isDark) {
+    final trackColor =
+        isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA);
+    final textColor = isDark ? AppTheme.kTextDark : AppTheme.kTextLight;
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: trackColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          _segment(
+            label: '今日',
+            selected: _showDayFilter,
+            textColor: textColor,
+            onTap: () => _setDayFilter(true),
+          ),
+          _segment(
+            label: '全部',
+            selected: !_showDayFilter,
+            textColor: textColor,
+            onTap: () => _setDayFilter(false),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _segment({
+    required String label,
+    required bool selected,
+    required Color textColor,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          decoration: BoxDecoration(
+            color: selected ? AppTheme.kIndigo : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              color: selected ? Colors.white : textColor,
+              decoration: TextDecoration.none,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWordCard(bool isDark) {
+    final textColor = isDark ? AppTheme.kTextDark : AppTheme.kTextLight;
+    const secondaryColor = AppTheme.kSecondaryTextLight;
     final word = _current;
     final progress =
         StorageService.instance.getWord(TextbookService.instance.currentId, word.word);
+    final familiarity = progress?.familiarity ?? 0;
+
     return Column(
       children: [
+        // 5. 单词卡
         Expanded(
           child: GestureDetector(
-            onTap: () => setState(() => _revealed = true),
-            child: LiquidGlassCard(
-              margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              borderRadius: 20,
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: AppTheme.kSystemTeal.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'L${word.lessonNumber}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.kSystemTeal,
-                        ),
-                      ),
+            onTap: () {
+              if (!_revealed) setState(() => _revealed = true);
+            },
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: LiquidGlassCard(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    // 右上角：课程号徽标
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: _lessonBadge(word),
                     ),
-                  ),
-                  Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (progress != null) ...[
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(
-                              5,
-                              (i) => Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 2),
-                                child: Icon(
-                                  CupertinoIcons.star_fill,
-                                  size: 18,
-                                  color: i < progress.familiarity
-                                      ? AppTheme.kSystemYellow
-                                      : theme.colorScheme.outline
-                                          .withOpacity(0.2),
+                    Expanded(
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // 5 星熟悉度
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: List.generate(
+                                5,
+                                (i) => Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                                  child: Icon(
+                                    CupertinoIcons.star_fill,
+                                    size: 18,
+                                    color: i < familiarity
+                                        ? AppTheme.kWarning
+                                        : (isDark
+                                            ? AppTheme.kSeparatorDark
+                                            : AppTheme.kSeparatorLight),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 18),
-                        ],
-                        Text(
-                          word.word,
-                          style: TextStyle(
-                            fontSize: 40,
-                            fontWeight: FontWeight.w700,
-                            color: theme.colorScheme.onSurface,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _voiceButton(
-                              theme: theme,
-                              label: '英音',
-                              accent: WordVoiceAccent.british,
+                            const SizedBox(height: 18),
+                            // 大单词
+                            Text(
+                              word.word,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w700,
+                                color: textColor,
+                                letterSpacing: 0.5,
+                              ),
                             ),
-                            const SizedBox(width: 12),
-                            _voiceButton(
-                              theme: theme,
-                              label: '美音',
-                              accent: WordVoiceAccent.american,
+                            const SizedBox(height: 8),
+                            // 音标
+                            Text(
+                              word.phonetic,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w400,
+                                color: secondaryColor,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            // 英 / 美发音
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _voiceButton(
+                                  label: '英',
+                                  accent: WordVoiceAccent.british,
+                                  isDark: isDark,
+                                ),
+                                const SizedBox(width: 12),
+                                _voiceButton(
+                                  label: '美',
+                                  accent: WordVoiceAccent.american,
+                                  isDark: isDark,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+                            // 释义 / 提示
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 200),
+                              child: _revealed
+                                  ? Padding(
+                                      key: const ValueKey('meaning'),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16),
+                                      child: Text(
+                                        word.meaning,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: textColor,
+                                          height: 1.5,
+                                        ),
+                                      ),
+                                    )
+                                  : Row(
+                                      key: const ValueKey('hint'),
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          CupertinoIcons.hand_draw,
+                                          size: 15,
+                                          color: secondaryColor.withOpacity(0.7),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '点击查看释义',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w400,
+                                            color: secondaryColor.withOpacity(0.7),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 14),
-                        Text(
-                          word.phonetic,
-                          style: TextStyle(
-                            fontSize: 18,
-                            color:
-                                theme.colorScheme.onSurface.withOpacity(0.5),
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                        const SizedBox(height: 28),
-                        AnimatedOpacity(
-                          duration: const Duration(milliseconds: 200),
-                          opacity: _revealed ? 1 : 0,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 24, vertical: 18),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary
-                                  .withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Text(
-                              word.meaning,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 21,
-                                fontWeight: FontWeight.w600,
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (!_revealed) ...[
-                          const SizedBox(height: 28),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(CupertinoIcons.hand_draw,
-                                  size: 15,
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.35)),
-                              const SizedBox(width: 8),
-                              Text(
-                                '点击卡片查看释义',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.35),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
+        // 6. 进度条 + 按钮
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
           child: Row(
             children: [
               Text(
@@ -604,29 +647,30 @@ class _WordLearningPageState extends State<WordLearningPage> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: theme.colorScheme.onSurface.withOpacity(0.4),
+                  color: secondaryColor,
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(2),
                   child: LinearProgressIndicator(
                     value: (_index + 1) / _vocab.length,
-                    minHeight: 5,
-                    backgroundColor:
-                        theme.colorScheme.surface,
+                    minHeight: 4,
+                    backgroundColor: isDark
+                        ? AppTheme.kSeparatorDark
+                        : AppTheme.kSeparatorLight,
                     valueColor:
-                        AlwaysStoppedAnimation(theme.colorScheme.primary),
+                        const AlwaysStoppedAnimation(AppTheme.kIndigo),
                   ),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 140),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
           child: Row(
             children: [
               Expanded(
@@ -638,7 +682,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
                   onPressed: _revealed ? () => _answer(false) : null,
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: DuolingoButton(
                   label: '认识',
@@ -655,21 +699,52 @@ class _WordLearningPageState extends State<WordLearningPage> {
     );
   }
 
+  Widget _lessonBadge(VocabWord word) {
+    const secondaryColor = AppTheme.kSecondaryTextLight;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: secondaryColor.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        'L${word.lessonNumber}',
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: secondaryColor,
+        ),
+      ),
+    );
+  }
+
   Widget _voiceButton({
-    required ThemeData theme,
     required String label,
     required WordVoiceAccent accent,
+    required bool isDark,
   }) {
+    final accentColor = isDark ? AppTheme.kIndigoLight : AppTheme.kIndigo;
+    final cardColor = isDark ? AppTheme.kCardDark : AppTheme.kCardLight;
+    const secondaryColor = AppTheme.kSecondaryTextLight;
     final selected = WordTtsService.instance.defaultAccent == accent;
     return GestureDetector(
       onTap: () => _speakWord(accent),
+      behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected
-              ? theme.colorScheme.primary.withOpacity(0.12)
-              : theme.colorScheme.surface,
+          color: selected ? accentColor.withOpacity(0.12) : cardColor,
           borderRadius: BorderRadius.circular(12),
+          boxShadow: selected
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.22 : 0.05),
+                    blurRadius: 8,
+                    spreadRadius: -2,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -677,9 +752,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
             Icon(
               CupertinoIcons.speaker_2_fill,
               size: 15,
-              color: selected
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurface.withOpacity(0.5),
+              color: selected ? accentColor : secondaryColor,
             ),
             const SizedBox(width: 7),
             Text(
@@ -687,9 +760,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: selected
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurface.withOpacity(0.6),
+                color: selected ? accentColor : secondaryColor,
               ),
             ),
           ],
@@ -698,42 +769,95 @@ class _WordLearningPageState extends State<WordLearningPage> {
     );
   }
 
-  Widget _buildComplete(ThemeData theme) {
-    return Center(
-      child: LiquidGlassCard(
-        margin: const EdgeInsets.all(32),
+  // 7. 完成卡片
+  Widget _buildComplete(bool isDark) {
+    final textColor = isDark ? AppTheme.kTextDark : AppTheme.kTextLight;
+    const secondaryColor = AppTheme.kSecondaryTextLight;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 120),
+      child: Center(
+        child: LiquidGlassCard(
+          margin: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                CupertinoIcons.checkmark_seal_fill,
+                size: 56,
+                color: AppTheme.kSuccess,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _showDayFilter ? '第$_currentDay天单词已学完' : '今日单词已学完',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '本词库共 ${_vocab.length} 词',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w400,
+                  color: secondaryColor,
+                ),
+              ),
+              const SizedBox(height: 20),
+              DuolingoButton(
+                label: '重新开始',
+                icon: CupertinoIcons.refresh,
+                variant: DuolingoButtonVariant.secondary,
+                onPressed: () => setState(() {
+                  _index = 0;
+                  _revealed = false;
+                }),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmpty() {
+    const secondaryColor = AppTheme.kSecondaryTextLight;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 120),
+      child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(CupertinoIcons.checkmark_seal_fill,
-                size: 56, color: AppTheme.kSystemBlue),
-            const SizedBox(height: 12),
-            Text(
-              _showDayFilter ? '第$_currentDay天单词已学完' : '今日单词已学完',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurface,
-              ),
+            Icon(
+              CupertinoIcons.tray,
+              size: 48,
+              color: secondaryColor.withOpacity(0.4),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             Text(
-              '本词库共 ${_vocab.length} 词',
-              textAlign: TextAlign.center,
-              style: TextStyle(
+              _showDayFilter ? '第$_currentDay天暂无单词数据' : '暂无单词数据',
+              style: const TextStyle(
                 fontSize: 15,
-                color: theme.colorScheme.onSurface.withOpacity(0.5),
+                fontWeight: FontWeight.w400,
+                color: secondaryColor,
               ),
             ),
-            const SizedBox(height: 20),
-            DuolingoButton(
-              label: '重新开始',
-              icon: CupertinoIcons.refresh,
-              variant: DuolingoButtonVariant.secondary,
-              onPressed: () => setState(() {
-                _index = 0;
-                _revealed = false;
-              }),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: DuolingoButton(
+                label: '查看全部单词',
+                onPressed: () {
+                  setState(() {
+                    _showDayFilter = false;
+                    _loading = true;
+                  });
+                  _reloadVocab();
+                },
+              ),
             ),
           ],
         ),
@@ -741,327 +865,173 @@ class _WordLearningPageState extends State<WordLearningPage> {
     );
   }
 
-  Widget _buildEmpty(ThemeData theme) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(CupertinoIcons.tray,
-              size: 48, color: theme.colorScheme.onSurface.withOpacity(0.2)),
-          const SizedBox(height: 16),
-          Text(
-            _showDayFilter ? '第$_currentDay天暂无单词数据' : '暂无单词数据',
-            style: TextStyle(
-              fontSize: 15,
-              color: theme.colorScheme.onSurface.withOpacity(0.5),
-            ),
-          ),
-          const SizedBox(height: 12),
-          DuolingoButton(
-            label: '查看全部单词',
-            onPressed: () {
-              setState(() {
-                _showDayFilter = false;
-                _reloadVocab();
-              });
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
+  // —— 生词本底部弹窗（干净样式，无玻璃层） ——
   void _showNotebook(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final sheetBg = isDark ? AppTheme.kCardDark : AppTheme.kCardLight;
+    final rowBg = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF2F2F7);
+    final textColor = isDark ? AppTheme.kTextDark : AppTheme.kTextLight;
+    const secondaryColor = AppTheme.kSecondaryTextLight;
+
     final words = StorageService.instance
         .wordsOf(TextbookService.instance.currentId)
         .where((w) => w.inNotebook)
         .toList();
-    const kSatMatrix = <double>[
-      1.3488, 0.147, 0.0342, 0, 0,
-      0.0426, 1.171, 0.0364, 0, 0,
-      0.0426, 0.147, 1.1714, 0, 0,
-      0, 0, 0, 1, 0,
-    ];
-    const radius = 24.0;
-    const blur = 50.0;
-    final tint = isDark ? AppTheme.kLuminaLime : const Color(0xFF527AFF);
-    final glassBase = isDark
-        ? const Color(0xFF1B1B1B).withOpacity(0.40)
-        : const Color(0xFFFFFFFF).withOpacity(0.32);
-    final glassTint1 = isDark
-        ? AppTheme.kLuminaLime.withOpacity(0.04)
-        : Colors.white.withOpacity(0.22);
-    final glassTint2 = isDark
-        ? const Color(0xFF000000).withOpacity(0.28)
-        : const Color(0xFFE4E4EA).withOpacity(0.22);
-    final innerBorder =
-        isDark ? Colors.white.withOpacity(0.22) : Colors.white.withOpacity(0.82);
-    final outerBorder = isDark
-        ? Colors.white.withOpacity(0.05)
-        : const Color(0xFF000000).withOpacity(0.04);
+    final allVocab =
+        TextbookRegistry.vocabWithDayNumber(TextbookService.instance.currentId);
+    final vocabMap = {for (final v in allVocab) v.word: v};
 
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
         decoration: BoxDecoration(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(radius)),
-          border: Border.all(
-            color: outerBorder,
-            width: 1.0,
-            strokeAlign: BorderSide.strokeAlignOutside,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: isDark
-                  ? Colors.black.withOpacity(0.52)
-                  : const Color(0xFF3A3A4A).withOpacity(0.22),
-              blurRadius: 46,
-              spreadRadius: -8,
-              offset: const Offset(0, -10),
-            ),
-            BoxShadow(
-              color: tint.withOpacity(isDark ? 0.10 : 0.12),
-              blurRadius: 18,
-              spreadRadius: -4,
-              offset: const Offset(0, -4),
-            ),
-          ],
+          color: sheetBg,
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(radius)),
-          child: Stack(
-            children: [
-              // 1) blur + sat 1.6
-              Positioned.fill(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(
-                      sigmaX: blur, sigmaY: blur, tileMode: TileMode.decal),
-                  child: ColorFiltered(
-                    colorFilter: const ColorFilter.matrix(kSatMatrix),
-                    child: const SizedBox.expand(),
-                  ),
-                ),
+        child: Column(
+          children: [
+            // 顶部把手
+            const SizedBox(height: 10),
+            Container(
+              width: 40,
+              height: 5,
+              decoration: BoxDecoration(
+                color: secondaryColor.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(3),
               ),
-              // 2) 三段渐变底色
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Color.alphaBlend(glassTint1, glassBase),
-                        glassBase,
-                        Color.alphaBlend(glassTint2, glassBase),
-                      ],
-                      stops: const [0.0, 0.55, 1.0],
+            ),
+            // 标题 + 关闭
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+              child: Row(
+                children: [
+                  Text(
+                    '生词本（${words.length}）',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: textColor,
                     ),
                   ),
-                ),
-              ),
-              // 3) 内描边（顶部 + 两侧）
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(radius)),
-                    border: Border.all(
-                      color: innerBorder,
-                      width: 0.8,
-                      strokeAlign: BorderSide.strokeAlignInside,
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    behavior: HitTestBehavior.opaque,
+                    child: const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Icon(
+                        CupertinoIcons.xmark,
+                        size: 20,
+                        color: secondaryColor,
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
-              // 4) 锐利顶部高光
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: ClipRRect(
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(radius)),
-                  child: SizedBox(
-                    height: 20,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.white.withOpacity(isDark ? 0.50 : 0.90),
-                            Colors.white.withOpacity(isDark ? 0.12 : 0.42),
-                            Colors.white.withOpacity(0.0),
-                          ],
-                          stops: const [0.0, 0.35, 1.0],
+            ),
+            Divider(
+              height: 1,
+              color: secondaryColor.withOpacity(0.2),
+            ),
+            // 列表
+            Expanded(
+              child: words.isEmpty
+                  ? Center(
+                      child: Text(
+                        '还没有生词\n点“不认识”即可加入',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: secondaryColor.withOpacity(0.5),
                         ),
                       ),
-                    ),
-                  ),
-                ),
-              ),
-              // 5) 对角线微光
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: ShaderMask(
-                    shaderCallback: (bounds) => LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withOpacity(isDark ? 0.05 : 0.16),
-                        Colors.white.withOpacity(0.0),
-                        Colors.white.withOpacity(0.0),
-                        Colors.black.withOpacity(isDark ? 0.16 : 0.035),
-                      ],
-                      stops: const [0.0, 0.40, 0.75, 1.0],
-                    ).createShader(bounds),
-                    blendMode: BlendMode.srcOver,
-                    child: const SizedBox.expand(),
-                  ),
-                ),
-              ),
-              // 6) 底部吸光
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: 40,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        (isDark ? Colors.black : const Color(0xFF3A3A4A))
-                            .withOpacity(isDark ? 0.30 : 0.08),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              // 7) 内容
-              SizedBox(
-                height: MediaQuery.of(context).size.height * 0.7,
-                child: Column(
-                  children: [
-                    const SizedBox(height: 10),
-                    Container(
-                      width: 40,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.outline.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      '生词本（${words.length}）',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: words.isEmpty
-                          ? Center(
-                              child: Text(
-                                '还没有生词\n点"不认识"即可加入',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.35),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                      itemCount: words.length,
+                      itemBuilder: (_, i) {
+                        final w = words[i];
+                        final vw = vocabMap[w.word];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: rowBg,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      w.word,
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                        color: textColor,
+                                      ),
+                                    ),
+                                    if (vw != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 3),
+                                        child: Text(
+                                          vw.phonetic,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w400,
+                                            color: secondaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                    if (vw != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 2),
+                                        child: Text(
+                                          vw.meaning,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w400,
+                                            color:
+                                                textColor.withOpacity(0.7),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
-                            )
-                          : ListView.builder(
-                              padding:
-                                  const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                              itemCount: words.length,
-                              itemBuilder: (_, i) {
-                                final w = words[i];
-                                VocabWord? vw;
-                                for (final v in _vocab) {
-                                  if (v.word == w.word) {
-                                    vw = v;
-                                    break;
-                                  }
-                                }
-                                return LiquidGlassCard(
-                                  margin:
-                                      const EdgeInsets.symmetric(vertical: 5),
-                                  padding: const EdgeInsets.all(14),
-                                  borderRadius: 22,
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(w.word,
-                                                style: const TextStyle(
-                                                    fontSize: 18,
-                                                    fontWeight:
-                                                        FontWeight.w700)),
-                                            if (vw != null)
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsets.only(top: 3),
-                                                child: Text(vw.phonetic,
-                                                    style: TextStyle(
-                                                        fontSize: 13,
-                                                        color: theme
-                                                            .colorScheme
-                                                            .onSurface
-                                                            .withOpacity(0.4))),
-                                              ),
-                                            if (vw != null)
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsets.only(top: 2),
-                                                child: Text(vw.meaning,
-                                                    style: TextStyle(
-                                                        fontSize: 14,
-                                                        color: theme
-                                                            .colorScheme
-                                                            .onSurface
-                                                            .withOpacity(0.65))),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                      GestureDetector(
-                                        onTap: () async {
-                                          w.inNotebook = false;
-                                          await StorageService.instance
-                                              .saveWord(w);
-                                          setState(() {});
-                                        },
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(8),
-                                          child: Icon(CupertinoIcons.delete,
-                                              size: 21,
-                                              color: AppTheme.kSystemRed),
-                                        ),
-                                      ),
-                                    ],
+                              GestureDetector(
+                                onTap: () async {
+                                  w.inNotebook = false;
+                                  await StorageService.instance.saveWord(w);
+                                  if (!mounted) return;
+                                  setState(() {});
+                                  Navigator.of(context).pop();
+                                  _showNotebook(context);
+                                },
+                                behavior: HitTestBehavior.opaque,
+                                child: const Padding(
+                                  padding: EdgeInsets.all(8),
+                                  child: Icon(
+                                    CupertinoIcons.delete,
+                                    size: 21,
+                                    color: AppTheme.kDanger,
                                   ),
-                                );
-                              },
-                            ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

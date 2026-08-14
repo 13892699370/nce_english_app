@@ -1,8 +1,10 @@
+import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/haptic_service.dart';
 
+/// Liquid Glass 风格教材下拉框（同卡片一致的模糊+高光+双层边框）
 class TextbookDropdown extends StatefulWidget {
   final List<TextbookDropdownOption> options;
   final String value;
@@ -86,6 +88,46 @@ class _TextbookDropdownState extends State<TextbookDropdown> {
             orElse: () => widget.options.first)
         .label;
 
+    final blur = 36.0;
+    const radius = 20.0;
+    final glassBase = isDark
+        ? const Color(0xFF1B1B1B).withOpacity(0.52)
+        : const Color(0xFFFFFFFF).withOpacity(0.50);
+    final innerBorder =
+        isDark ? Colors.white.withOpacity(0.16) : Colors.white.withOpacity(0.75);
+    final outerBorder = isDark
+        ? Colors.white.withOpacity(0.06)
+        : const Color(0xFF000000).withOpacity(0.05);
+    final shadows = isDark
+        ? [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.40),
+              blurRadius: 30,
+              spreadRadius: -6,
+              offset: const Offset(0, 14),
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.18),
+              blurRadius: 10,
+              spreadRadius: -2,
+              offset: const Offset(0, 5),
+            ),
+          ]
+        : [
+            BoxShadow(
+              color: const Color(0xFF3A3A4A).withOpacity(0.14),
+              blurRadius: 34,
+              spreadRadius: -8,
+              offset: const Offset(0, 14),
+            ),
+            BoxShadow(
+              color: const Color(0xFF3A3A4A).withOpacity(0.06),
+              blurRadius: 10,
+              spreadRadius: -2,
+              offset: const Offset(0, 5),
+            ),
+          ];
+
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) {
@@ -93,53 +135,125 @@ class _TextbookDropdownState extends State<TextbookDropdown> {
         _showActionSheet();
       },
       onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 100),
-        opacity: _pressed ? 0.5 : 1.0,
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 140),
+        scale: _pressed ? 0.985 : 1.0,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
           decoration: BoxDecoration(
-            color: isDark ? AppTheme.kLuminaSurfaceDark : AppTheme.kLuminaSurface,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(radius),
             border: Border.all(
-              color: isDark
-                  ? Colors.white.withOpacity(0.06)
-                  : AppTheme.kLuminaSurfaceHigh.withOpacity(0.55),
-              width: 0.7,
+              color: outerBorder,
+              width: 1.0,
+              strokeAlign: BorderSide.strokeAlignOutside,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.22 : 0.04),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
+            boxShadow: shadows,
           ),
-          child: Row(
-            children: [
-              Icon(
-                CupertinoIcons.book,
-                size: 20,
-                color: accentColor,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  currentLabel,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? AppTheme.kLuminaTextDark : AppTheme.kLuminaText,
-                    decoration: TextDecoration.none,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(radius),
+            child: Stack(
+              children: [
+                // Blur
+                Positioned.fill(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+                    child: const SizedBox.expand(),
                   ),
                 ),
-              ),
-              Icon(
-                CupertinoIcons.chevron_down,
-                size: 14,
-                color: const Color(0xFF8E8E93),
-              ),
-            ],
+                // Base
+                Positioned.fill(child: ColoredBox(color: glassBase)),
+                // Inner border
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(radius),
+                      border: Border.all(
+                        color: innerBorder,
+                        width: 0.8,
+                        strokeAlign: BorderSide.strokeAlignInside,
+                      ),
+                    ),
+                  ),
+                ),
+                // Top highlight
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: ClipRRect(
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(radius)),
+                    child: SizedBox(
+                      height: 34,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.white.withOpacity(isDark ? 0.14 : 0.50),
+                              Colors.white.withOpacity(0.0),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Bottom inner shadow
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: radius,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          (isDark ? Colors.black : const Color(0xFF3A3A4A))
+                              .withOpacity(isDark ? 0.22 : 0.06),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // Content
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+                  child: Row(
+                    children: [
+                      Icon(
+                        CupertinoIcons.book,
+                        size: 20,
+                        color: accentColor,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          currentLabel,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: isDark
+                                ? AppTheme.kLuminaTextDark
+                                : AppTheme.kLuminaText,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        CupertinoIcons.chevron_down,
+                        size: 14,
+                        color: const Color(0xFF8E8E93),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

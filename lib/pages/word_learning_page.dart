@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../data/textbook_registry.dart';
@@ -772,6 +773,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
 
   void _showNotebook(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final words = StorageService.instance
         .wordsOf(TextbookService.instance.currentId)
         .where((w) => w.inNotebook)
@@ -781,107 +783,127 @@ class _WordLearningPageState extends State<WordLearningPage> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-        child: Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: BoxDecoration(
-            color: theme.scaffoldBackgroundColor,
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 8),
-              Container(
-                width: 36,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.outline.withOpacity(0.25),
-                  borderRadius: BorderRadius.circular(3),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 36, sigmaY: 36),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.7,
+            decoration: BoxDecoration(
+              color: isDark
+                  ? const Color(0xFF1B1B1B).withOpacity(0.70)
+                  : const Color(0xFFFFFFFF).withOpacity(0.72),
+              border: Border(
+                top: BorderSide(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.14)
+                      : Colors.white.withOpacity(0.75),
+                  width: 0.8,
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                '生词本（${words.length}）',
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 40,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.outline.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: words.isEmpty
-                    ? Center(
-                        child: Text(
-                          '还没有生词\n点"不认识"即可加入',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: theme.colorScheme.onSurface.withOpacity(0.35),
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: words.length,
-                        itemBuilder: (_, i) {
-                          final w = words[i];
-                          VocabWord? vw;
-                          for (final v in _vocab) {
-                            if (v.word == w.word) {
-                              vw = v;
-                              break;
-                            }
-                          }
-                          return LiquidGlassCard(
-                            margin: const EdgeInsets.symmetric(vertical: 4),
-                            padding: const EdgeInsets.all(12),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(w.word,
-                                          style: const TextStyle(
-                                              fontSize: 17,
-                                              fontWeight: FontWeight.w600)),
-                                      if (vw != null)
-                                        Text(vw.phonetic,
-                                            style: TextStyle(
-                                                fontSize: 13,
-                                                color: theme.colorScheme
-                                                    .onSurface
-                                                    .withOpacity(0.4))),
-                                      if (vw != null)
-                                        Text(vw.meaning,
-                                            style: TextStyle(
-                                                fontSize: 13,
-                                                color: theme.colorScheme
-                                                    .onSurface
-                                                    .withOpacity(0.6))),
-                                    ],
-                                  ),
-                                ),
-                                GestureDetector(
-                                  onTap: () async {
-                                    w.inNotebook = false;
-                                    await StorageService.instance
-                                        .saveWord(w);
-                                    setState(() {});
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8),
-                                    child: Icon(CupertinoIcons.delete,
-                                        size: 20, color: AppTheme.kSystemRed),
-                                  ),
-                                ),
-                              ],
+                const SizedBox(height: 14),
+                Text(
+                  '生词本（${words.length}）',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: words.isEmpty
+                      ? Center(
+                          child: Text(
+                            '还没有生词\n点"不认识"即可加入',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: theme.colorScheme.onSurface.withOpacity(0.35),
                             ),
-                          );
-                        },
-                      ),
-              ),
-            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                          itemCount: words.length,
+                          itemBuilder: (_, i) {
+                            final w = words[i];
+                            VocabWord? vw;
+                            for (final v in _vocab) {
+                              if (v.word == w.word) {
+                                vw = v;
+                                break;
+                              }
+                            }
+                            return LiquidGlassCard(
+                              margin: const EdgeInsets.symmetric(vertical: 5),
+                              padding: const EdgeInsets.all(14),
+                              borderRadius: 22,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(w.word,
+                                            style: const TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w700)),
+                                        if (vw != null)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 3),
+                                            child: Text(vw.phonetic,
+                                                style: TextStyle(
+                                                    fontSize: 13,
+                                                    color: theme.colorScheme
+                                                        .onSurface
+                                                        .withOpacity(0.4))),
+                                          ),
+                                        if (vw != null)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 2),
+                                            child: Text(vw.meaning,
+                                                style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: theme.colorScheme
+                                                        .onSurface
+                                                        .withOpacity(0.65))),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () async {
+                                      w.inNotebook = false;
+                                      await StorageService.instance
+                                          .saveWord(w);
+                                      setState(() {});
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8),
+                                      child: Icon(CupertinoIcons.delete,
+                                          size: 21, color: AppTheme.kSystemRed),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

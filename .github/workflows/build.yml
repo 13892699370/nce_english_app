@@ -1,15 +1,19 @@
-name: Build APK & IPA
+name: Build & Release APK + IPA
 
-# 云端 macOS runner 构建双端安装包：
-#   - iOS: 未签名 IPA（build/Runner_unsigned.ipa），用 Sideloadly/AltStore/TrollStore 自签
-#   - Android: release APK，debug 签名（可直接安装）
+# 云端 macOS runner 构建双端安装包并发布到 GitHub Releases：
+#   - Android: release APK（debug 签名，可直接安装）
+#   - iOS: 未签名 IPA（需 Sideloadly/AltStore/TrollStore 自签）
 #
 # 触发：推送到 main 分支，或在 GitHub Actions 页面手动 Run workflow
+# 每次构建自动顺延版本号 patch（1.3.0+4 → 1.3.1+5 → 1.3.2+6 …）
 
 on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
+
+permissions:
+  contents: write   # 创建 Release 需要写权限
 
 jobs:
   build:
@@ -18,6 +22,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # 需要完整历史来生成 changelog
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -31,11 +37,37 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # ---- 自动顺延版本号 ----
+      # 读取 pubspec.yaml 中的 version，patch+1、build+1
+      - name: Bump version
+        id: bump
+        run: |
+          # 提取当前版本号
+          CURRENT=$(grep '^version:' pubspec.yaml | sed 's/version: //')
+          echo "Current version: $CURRENT"
+
+          VERSION_PART=$(echo "$CURRENT" | cut -d '+' -f 1)   # 1.3.0
+          BUILD_PART=$(echo "$CURRENT" | cut -d '+' -f 2)     # 4
+
+          MAJOR=$(echo "$VERSION_PART" | cut -d '.' -f 1)
+          MINOR=$(echo "$VERSION_PART" | cut -d '.' -f 2)
+          PATCH=$(echo "$VERSION_PART" | cut -d '.' -f 3)
+
+          # patch +1, build +1
+          NEW_PATCH=$((PATCH + 1))
+          NEW_BUILD=$((BUILD_PART + 1))
+          NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}+${NEW_BUILD}"
+
+          echo "New version: $NEW_VERSION"
+          # 更新 pubspec.yaml
+          sed -i '' "s/^version:.*/version: $NEW_VERSION/" pubspec.yaml
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "build_number=$NEW_BUILD" >> "$GITHUB_OUTPUT"
+
       - name: Flutter doctor
         run: flutter --version
 
       # 仓库只含 lib/ + pubspec + 关键 manifest；云端补齐 iOS/Android 平台脚手架
-      # flutter create 不会覆盖已存在文件（保留 AndroidManifest 的 VIBRATE 权限与 Info.plist）
       - name: Scaffold platforms
         run: flutter create . --platforms=ios,android,web --org com.nce.checkin --project-name nce_checkin
 
@@ -43,12 +75,6 @@ jobs:
         run: flutter pub get
 
       # ---------------- iOS 未签名 IPA ----------------
-      # `flutter build ios --no-codesign` 会完整跑通 xcodebuild（含 Podfile 生成、pod install、
-      # Flutter framework 构建），产物 .app 已由 xcodebuild 产出；但新版 Flutter 在最后的
-      # 「deployable 团队校验」处仍会失败退出 — 这里忽略该退出码，直接定位已构建的 .app 打包。
-      #
-      # 关键：find 可能匹配到多个 Runner.app（含空壳/中间产物），必须挑选「含 Flutter.framework」
-      # 的完整 app（几十 MB），否则会打包出 332B 的空 IPA。
       - name: Build & package unsigned iOS app
         run: |
           set +e
@@ -67,7 +93,7 @@ jobs:
             echo "  $size | Flutter.framework=$has_flutter | $p"
           done < /tmp/runner_apps.txt
 
-          # 优先选含 Flutter.framework 的完整 app（可运行的真包）
+          # 优先选含 Flutter.framework 的完整 app
           APP_PATH=""
           while IFS= read -r p; do
             [ -d "$p/Frameworks/Flutter.framework" ] && { APP_PATH="$p"; break; }
@@ -84,26 +110,90 @@ jobs:
           echo "Selected app size: $(du -sh "$APP_PATH" | cut -f1)"
           rm -rf build/Payload
           mkdir -p build/Payload
-          # -L 跟随符号链接，确保拷贝真实内容
           cp -RL "$APP_PATH" build/Payload/
           cd build
-          zip -qr Runner_unsigned.ipa Payload
-          ls -lh Runner_unsigned.ipa
-
-      - name: Upload iOS IPA artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-unsigned-ipa
-          path: build/Runner_unsigned.ipa
-          retention-days: 30
+          zip -qr "nce_checkin_${{ steps.bump.outputs.version }}_ios.ipa" Payload
+          ls -lh *.ipa
 
       # ---------------- Android APK ----------------
       - name: Build Android APK
         run: flutter build apk --release
 
+      - name: Rename APK
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            "nce_checkin_${{ steps.bump.outputs.version }}_android.apk"
+          ls -lh *.apk
+
+      # ---------------- 上传构建产物 (Artifacts) ----------------
+      - name: Upload iOS IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-unsigned-ipa
+          path: nce_checkin_${{ steps.bump.outputs.version }}_ios.ipa
+          retention-days: 30
+
       - name: Upload Android APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: build/app/outputs/flutter-apk/*.apk
+          path: nce_checkin_${{ steps.bump.outputs.version }}_android.apk
           retention-days: 30
+
+      # ---------------- 生成 Release Notes ----------------
+      - name: Generate release notes
+        id: notes
+        run: |
+          # 从上次 tag 到现在的 commit 历史
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"- %s" "$LAST_TAG"..HEAD 2>/dev/null)
+          else
+            COMMITS=$(git log --pretty=format:"- %s" -20)
+          fi
+
+          VERSION="${{ steps.bump.outputs.version }}"
+
+          cat > release_notes.md <<EOF
+          # 新概念英语打卡 v${VERSION}
+
+          ## 安装说明
+
+          ### Android
+          下载 \`.apk\` 文件直接安装。
+
+          ### iOS
+          下载 \`.ipa\` 文件，需使用 [Sideloadly](https://sideloadly.io/)、[AltStore](https://altstore.io/) 或 TrollStore 等工具自签后安装。
+
+          ## 更新日志
+          ${COMMITS}
+          EOF
+
+          cat release_notes.md
+          echo "notes<<EOF" >> "$GITHUB_OUTPUT"
+          cat release_notes.md >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      # ---------------- 创建 GitHub Release ----------------
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.bump.outputs.version }}
+          name: 新概念英语打卡 v${{ steps.bump.outputs.version }}
+          body: ${{ steps.notes.outputs.notes }}
+          draft: false
+          prerelease: false
+          files: |
+            nce_checkin_${{ steps.bump.outputs.version }}_android.apk
+            nce_checkin_${{ steps.bump.outputs.version }}_ios.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ---------------- 回写版本号到仓库 ----------------
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pubspec.yaml
+          git commit -m "chore: bump version to ${{ steps.bump.outputs.version }}" || echo "No changes to commit"
+          git push

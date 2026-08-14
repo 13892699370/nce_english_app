@@ -113,6 +113,8 @@ jobs:
           cp -RL "$APP_PATH" build/Payload/
           cd build
           zip -qr "nce_checkin_${{ steps.bump.outputs.version }}_ios.ipa" Payload
+          cd ..
+          cp "build/nce_checkin_${{ steps.bump.outputs.version }}_ios.ipa" .
           ls -lh *.ipa
 
       # ---------------- Android APK ----------------

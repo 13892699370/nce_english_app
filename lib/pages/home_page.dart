@@ -7,7 +7,7 @@ import 'word_learning_page.dart';
 import 'achievement_page.dart';
 import 'calendar_page.dart';
 
-/// 主框架：纯色背景 + IndexedStack 页面 + 浮动胶囊底部导航
+/// 主框架：纯色背景 + IndexedStack 页面 + Duolingo 风格底部胶囊导航
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -28,7 +28,7 @@ class _HomePageState extends State<HomePage> {
   static const _items = [
     _NavItem('打卡', CupertinoIcons.checkmark_seal_fill),
     _NavItem('单词', CupertinoIcons.text_bubble_fill),
-    _NavItem('成就', CupertinoIcons.rosette_fill),
+    _NavItem('成就', CupertinoIcons.rosette),
     _NavItem('日历', CupertinoIcons.calendar),
   ];
 
@@ -40,18 +40,18 @@ class _HomePageState extends State<HomePage> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // 页面内容（各页面自带 CupertinoPageScaffold + 透明导航栏）
+          // 页面内容（各页面自带 CupertinoPageScaffold）
           Positioned.fill(
             child: IndexedStack(index: _index, children: _pages),
           ),
-          // 浮动胶囊底部导航
+          // Duolingo 风格底部胶囊导航
           Positioned(
             left: 16,
             right: 16,
             bottom: 8,
             child: SafeArea(
               top: false,
-              child: _PillBottomBar(
+              child: _DuoBottomBar(
                 items: _items,
                 currentIndex: _index,
                 onTap: (i) => setState(() => _index = i),
@@ -64,14 +64,13 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-/// 简洁浮动胶囊底部导航：仅 BackdropFilter sigma 30 模糊，
-/// 白/深色半透明底，选中项 Indigo + 小圆点指示，未选中灰色。
-class _PillBottomBar extends StatelessWidget {
+/// Duolingo 风格底部导航：白色胶囊容器，选中项有绿色圆角背景 + 3D 立体感
+class _DuoBottomBar extends StatelessWidget {
   final List<_NavItem> items;
   final int currentIndex;
   final ValueChanged<int> onTap;
 
-  const _PillBottomBar({
+  const _DuoBottomBar({
     required this.items,
     required this.currentIndex,
     required this.onTap,
@@ -82,13 +81,11 @@ class _PillBottomBar extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const radius = 999.0;
     final bg = isDark
-        ? const Color(0xFF1C1C1E).withOpacity(0.72)
-        : Colors.white.withOpacity(0.72);
+        ? const Color(0xFF1F2D34).withOpacity(0.92)
+        : Colors.white.withOpacity(0.94);
     final borderColor = isDark
         ? Colors.white.withOpacity(0.08)
-        : Colors.black.withOpacity(0.04);
-    final activeColor = isDark ? AppTheme.kIndigoLight : AppTheme.kIndigo;
-    final muted = isDark ? AppTheme.kSecondaryTextDark : AppTheme.kSecondaryTextLight;
+        : AppTheme.kSeparatorLight;
 
     return Container(
       decoration: BoxDecoration(
@@ -96,21 +93,20 @@ class _PillBottomBar extends StatelessWidget {
         border: Border.all(color: borderColor, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.40 : 0.10),
-            blurRadius: 24,
-            spreadRadius: -6,
-            offset: const Offset(0, 10),
+            color: Colors.black.withOpacity(isDark ? 0.45 : 0.12),
+            blurRadius: 28,
+            spreadRadius: -8,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(radius),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
           child: Container(
             color: bg,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: List.generate(items.length, (i) {
@@ -119,51 +115,75 @@ class _PillBottomBar extends StatelessWidget {
                 return GestureDetector(
                   onTap: () => onTap(i),
                   behavior: HitTestBehavior.opaque,
-                  child: AnimatedScale(
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOut,
-                    scale: selected ? 1.08 : 1.0,
-                    child: SizedBox(
-                      width: 64,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            item.icon,
-                            size: selected ? 25 : 23,
-                            color: selected ? activeColor : muted,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            item.label,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: selected
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                              color: selected ? activeColor : muted,
-                              decoration: TextDecoration.none,
-                            ),
-                          ),
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            margin: const EdgeInsets.only(top: 4),
-                            width: selected ? 5 : 0,
-                            height: selected ? 5 : 0,
-                            decoration: BoxDecoration(
-                              color: activeColor,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  child: _DuoNavItem(
+                    item: item,
+                    selected: selected,
+                    isDark: isDark,
                   ),
                 );
               }),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DuoNavItem extends StatelessWidget {
+  final _NavItem item;
+  final bool selected;
+  final bool isDark;
+
+  const _DuoNavItem({
+    required this.item,
+    required this.selected,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // 选中项：绿色填充胶囊 + 白字白图标（3D 立体感）
+    // 未选中项：透明 + 灰字
+    final activeBg = AppTheme.kDuoGreen;
+    final activeFg = Colors.white;
+    final muted = isDark
+        ? AppTheme.kSecondaryTextDark
+        : AppTheme.kSecondaryTextLight;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+      decoration: BoxDecoration(
+        color: selected ? activeBg : Colors.transparent,
+        borderRadius: BorderRadius.circular(999),
+        border: Border(
+          bottom: BorderSide(
+            color: selected ? AppTheme.kDuoGreenDark : Colors.transparent,
+            width: selected ? 3 : 0,
+          ),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            item.icon,
+            size: 22,
+            color: selected ? activeFg : muted,
+          ),
+          const SizedBox(width: 7),
+          Text(
+            item.label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: selected ? activeFg : muted,
+              decoration: TextDecoration.none,
+            ),
+          ),
+        ],
       ),
     );
   }

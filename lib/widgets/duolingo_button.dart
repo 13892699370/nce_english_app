@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import '../services/haptic_service.dart';
 import '../theme/app_theme.dart';
 
-/// 简洁现代按钮
-/// - primary: Indigo 底 + 白字
-/// - secondary: 灰底 + 文字色
-/// - success: 绿底 + 白字
-/// - danger: 红底 + 白字
+/// Duolingo 标志性 3D 立体按钮
+/// 亮色顶面 + 深色底边（4px）形成"凸起"立体感；
+/// 按下时整体下沉 4px 且底边消失，模拟"按压凹陷"。
 enum DuolingoButtonVariant {
   primary,
   secondary,
@@ -30,7 +28,7 @@ class DuolingoButton extends StatefulWidget {
     this.onPressed,
     this.variant = DuolingoButtonVariant.primary,
     this.icon,
-    this.borderRadius = 14,
+    this.borderRadius = 16,
     this.minHeight = 52,
     this.fullwidth = true,
     this.enableHaptic = true,
@@ -51,19 +49,18 @@ class _DuolingoButtonState extends State<DuolingoButton> {
     widget.onPressed?.call();
   }
 
+  /// 返回 (顶面色, 底边深色) 用于 3D 立体效果
   (Color, Color) _colors(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     switch (widget.variant) {
       case DuolingoButtonVariant.primary:
-        return (isDark ? AppTheme.kIndigoLight : AppTheme.kIndigo, Colors.white);
+        return (AppTheme.kDuoGreen, AppTheme.kDuoGreenDark);
       case DuolingoButtonVariant.success:
-        return (AppTheme.kSuccess, Colors.white);
+        return (AppTheme.kDuoGreen, AppTheme.kDuoGreenDark);
       case DuolingoButtonVariant.danger:
-        return (AppTheme.kDanger, Colors.white);
+        return (AppTheme.kDuoRed, AppTheme.kDuoRedDark);
       case DuolingoButtonVariant.secondary:
-        return isDark
-            ? (const Color(0xFF2C2C2E), AppTheme.kTextDark)
-            : (const Color(0xFFE5E5EA), AppTheme.kTextLight);
+        // secondary 为白底/描边样式，不使用 3D 立体
+        return (Colors.transparent, Colors.transparent);
     }
   }
 
@@ -71,63 +68,80 @@ class _DuolingoButtonState extends State<DuolingoButton> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final disabled = widget.onPressed == null;
-    final (bg, fg) = _colors(context);
+    final (top, bottom) = _colors(context);
+    final isSecondary = widget.variant == DuolingoButtonVariant.secondary;
 
-    final displayBg = disabled
-        ? (isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA))
-        : bg;
-    final displayFg =
-        disabled ? (isDark ? AppTheme.kSecondaryTextDark : AppTheme.kSecondaryTextLight) : fg;
+    // 禁用态：Duolingo 风格浅灰底 + 灰字
+    final disabledBg = isDark ? const Color(0xFF2D3F47) : const Color(0xFFE5E5E5);
+    final disabledFg = isDark ? AppTheme.kSecondaryTextDark : AppTheme.kSecondaryTextLight;
+
+    final fg = disabled
+        ? disabledFg
+        : (isSecondary ? AppTheme.kDuoGreen : Colors.white);
+
+    final pressed = _pressed && !disabled;
+    final depth = (pressed || disabled) ? 0.0 : 4.0;
+
+    final borderColor = isSecondary
+        ? AppTheme.kDuoGreen
+        : (disabled ? Colors.transparent : Colors.transparent);
 
     final inner = GestureDetector(
       onTapDown: disabled ? null : (_) => _onTapDown(),
       onTapCancel: disabled ? null : _onTapCancel,
       onTapUp: disabled ? null : (_) => _onTapUp(),
-      child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 120),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 70),
         curve: Curves.easeOut,
-        child: Container(
-          constraints: BoxConstraints(minHeight: widget.minHeight),
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          decoration: BoxDecoration(
-            color: displayBg,
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            boxShadow: disabled
-                ? null
-                : [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(isDark ? 0.30 : 0.10),
-                      blurRadius: 16,
-                      spreadRadius: -4,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
+        transform: Matrix4.translationValues(0, pressed ? 4.0 : 0.0, 0),
+        constraints: BoxConstraints(minHeight: widget.minHeight),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: disabled
+              ? disabledBg
+              : (isSecondary
+                  ? (isDark ? AppTheme.kCardDark : Colors.white)
+                  : top),
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+          border: Border(
+            bottom: BorderSide(color: bottom, width: depth),
+            top: BorderSide(color: borderColor, width: isSecondary ? 2 : 0),
+            left: BorderSide(color: borderColor, width: isSecondary ? 2 : 0),
+            right: BorderSide(color: borderColor, width: isSecondary ? 2 : 0),
           ),
-          child: Row(
-            mainAxisSize:
-                widget.fullwidth ? MainAxisSize.max : MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (widget.icon != null) ...[
-                Icon(widget.icon, color: displayFg, size: 19),
-                const SizedBox(width: 8),
-              ],
-              Flexible(
-                child: Text(
-                  widget.label,
-                  style: TextStyle(
-                    color: displayFg,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.2,
+          boxShadow: (disabled || pressed || isSecondary)
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.22 : 0.08),
+                    blurRadius: 8,
+                    spreadRadius: -2,
+                    offset: const Offset(0, 4),
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
+                ],
+        ),
+        child: Row(
+          mainAxisSize: widget.fullwidth ? MainAxisSize.max : MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (widget.icon != null) ...[
+              Icon(widget.icon, color: fg, size: 20),
+              const SizedBox(width: 8),
             ],
-          ),
+            Flexible(
+              child: Text(
+                widget.label,
+                style: TextStyle(
+                  color: fg,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.3,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ),
     );

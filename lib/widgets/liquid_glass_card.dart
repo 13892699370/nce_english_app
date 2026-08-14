@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// 干净的现代卡片组件
-/// 白色/深色底 + 柔和阴影 + 圆角，无玻璃模糊
+/// Duolingo 风格干净卡片
+/// 白/深色底 + 细描边 + 柔和阴影 + 圆角
 class LiquidGlassCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? margin;
@@ -30,31 +30,28 @@ class LiquidGlassCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = backgroundColor ??
         (isDark ? AppTheme.kCardDark : AppTheme.kCardLight);
-    final defaultShadow = isDark
-        ? [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 16,
-              spreadRadius: -6,
-              offset: const Offset(0, 4),
-            ),
-          ]
-        : [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 20,
-              spreadRadius: -4,
-              offset: const Offset(0, 4),
-            ),
-          ];
+    final defaultBorder = border ??
+        Border.all(
+          color: isDark ? AppTheme.kSeparatorDark : AppTheme.kSeparatorLight,
+          width: 1,
+        );
+    final defaultShadow = boxShadow ??
+        [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.30 : 0.06),
+            blurRadius: 16,
+            spreadRadius: -6,
+            offset: const Offset(0, 6),
+          ),
+        ];
 
     return Container(
       margin: margin,
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: border,
-        boxShadow: boxShadow ?? defaultShadow,
+        border: defaultBorder,
+        boxShadow: defaultShadow,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),

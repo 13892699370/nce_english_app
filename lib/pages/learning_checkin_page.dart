@@ -19,8 +19,8 @@ import '../widgets/celebration_dialog.dart';
 import '../widgets/day_completion_overlay.dart';
 import '../widgets/theme_toggle_button.dart';
 
-/// 新概念学习打卡页（Modern Clean 风格）
-/// 灵感来源：Apple Fitness / Things 3 / Streaks
+/// 新概念学习打卡页（Duolingo Vibrant 风格）
+/// 灵感来源：Duolingo（鲜艳色块、3D 立体按钮、游戏化）
 class LearningCheckinPage extends StatefulWidget {
   const LearningCheckinPage({super.key});
 
@@ -204,9 +204,17 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('打卡完成，进入第$_currentDay天'),
+          content: Text(
+            '打卡完成，进入第$_currentDay天',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              decoration: TextDecoration.none,
+            ),
+          ),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: AppTheme.kIndigo,
+          backgroundColor: AppTheme.kDuoGreen,
           duration: const Duration(seconds: 2),
         ),
       );
@@ -249,15 +257,16 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
         .map((t) => TextbookDropdownOption(value: t.id, label: t.name))
         .toList();
     final totalDays = _totalDays();
-    final accent = isDark ? AppTheme.kIndigoLight : AppTheme.kIndigo;
-    final cardColor = isDark ? AppTheme.kCardDark : AppTheme.kCardLight;
     final textColor = isDark ? AppTheme.kTextDark : AppTheme.kTextLight;
-    const secondaryColor = AppTheme.kSecondaryTextLight;
+    final secondaryColor =
+        isDark ? AppTheme.kSecondaryTextDark : AppTheme.kSecondaryTextLight;
 
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('Lumina Mono'),
-        trailing: ThemeToggleButton(),
+      backgroundColor: isDark ? AppTheme.kBgDark : AppTheme.kBgLight,
+      navigationBar: CupertinoNavigationBar(
+        backgroundColor: Colors.transparent,
+        border: null,
+        trailing: const ThemeToggleButton(),
       ),
       child: Material(
         color: Colors.transparent,
@@ -265,7 +274,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
           children: [
             // 1. 大标题 + 副标题
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Column(
@@ -275,7 +284,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                       '今日学习',
                       style: TextStyle(
                         fontSize: 34,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                         letterSpacing: -0.5,
                         color: textColor,
                         decoration: TextDecoration.none,
@@ -284,9 +293,9 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                     const SizedBox(height: 6),
                     Text(
                       '第$_currentDay天 · ${TextbookService.instance.current.name}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
-                        fontWeight: FontWeight.w400,
+                        fontWeight: FontWeight.w500,
                         color: secondaryColor,
                         decoration: TextDecoration.none,
                       ),
@@ -297,7 +306,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
             ),
             // 2. 教材下拉
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
               child: TextbookDropdown(
                 options: textbooks,
                 value: TextbookService.instance.currentId,
@@ -306,7 +315,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
             ),
             // 3. 天数 chips（水平滚动）
             SizedBox(
-              height: 36,
+              height: 40,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -320,19 +329,40 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
                       curve: Curves.easeOut,
-                      height: 36,
+                      height: 40,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: selected ? accent : cardColor,
-                        borderRadius: BorderRadius.circular(12),
+                        color: selected
+                            ? AppTheme.kDuoGreen
+                            : (isDark
+                                ? AppTheme.kCardDark
+                                : AppTheme.kCardLight),
+                        borderRadius: BorderRadius.circular(14),
+                        border: selected
+                            ? const Border(
+                                bottom: BorderSide(
+                                    color: AppTheme.kDuoGreenDark, width: 3),
+                                top: BorderSide(
+                                    color: AppTheme.kDuoGreen, width: 0),
+                                left: BorderSide(
+                                    color: AppTheme.kDuoGreen, width: 0),
+                                right: BorderSide(
+                                    color: AppTheme.kDuoGreen, width: 0),
+                              )
+                            : Border.all(
+                                color: isDark
+                                    ? AppTheme.kSeparatorDark
+                                    : AppTheme.kSeparatorLight,
+                                width: 1,
+                              ),
                         boxShadow: selected
                             ? null
                             : [
                                 BoxShadow(
                                   color: Colors.black
                                       .withOpacity(isDark ? 0.22 : 0.05),
-                                  blurRadius: 10,
+                                  blurRadius: 8,
                                   spreadRadius: -3,
                                   offset: const Offset(0, 2),
                                 ),
@@ -342,9 +372,14 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                         '第$day天',
                         style: TextStyle(
                           fontSize: 14,
-                          fontWeight:
-                              selected ? FontWeight.w600 : FontWeight.w500,
-                          color: selected ? Colors.white : textColor,
+                          fontWeight: selected
+                              ? FontWeight.w800
+                              : FontWeight.w600,
+                          color: selected
+                              ? Colors.white
+                              : (isDark
+                                  ? AppTheme.kSecondaryTextDark
+                                  : AppTheme.kSecondaryTextLight),
                           decoration: TextDecoration.none,
                         ),
                       ),
@@ -353,11 +388,15 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                 },
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             // 4-8. 任务区
             Expanded(
               child: _loading
-                  ? const Center(child: CupertinoActivityIndicator())
+                  ? Center(
+                      child: CupertinoActivityIndicator(
+                        color: AppTheme.kDuoGreen,
+                      ),
+                    )
                   : _buildTaskArea(),
             ),
           ],
@@ -369,7 +408,9 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
   Widget _buildTaskArea() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    const secondaryColor = AppTheme.kSecondaryTextLight;
+    final secondaryColor = isDark
+        ? AppTheme.kSecondaryTextDark
+        : AppTheme.kSecondaryTextLight;
     final dayLessons = _dayLessons;
 
     if (dayLessons.isEmpty) {
@@ -378,6 +419,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
           '暂无课程数据',
           style: TextStyle(
             fontSize: 15,
+            fontWeight: FontWeight.w500,
             color: secondaryColor,
             decoration: TextDecoration.none,
           ),
@@ -390,7 +432,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
       children: [
         // 4. 天信息卡
         _buildDayInfoCard(dayLessons),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
         // 5. 任务区段
         _buildSection(
@@ -400,7 +442,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
           states: _preview,
           section: 0,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         _buildSection(
           icon: CupertinoIcons.play_circle_fill,
           title: '正式学习',
@@ -408,7 +450,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
           states: _formal,
           section: 1,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         _buildSection(
           icon: CupertinoIcons.arrow_clockwise,
           title: '复习',
@@ -418,11 +460,11 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
         ),
 
         // 6. 仿写句子
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         _buildSentenceCard(isDark),
 
         // 7. 完成今日打卡
-        const SizedBox(height: 20),
+        const SizedBox(height: 22),
         DuolingoButton(
           label: '完成今日打卡',
           variant: DuolingoButtonVariant.primary,
@@ -436,9 +478,9 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
             opacity: 0.6,
             child: Text(
               _isSaving ? '保存中…' : '已自动保存',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                fontWeight: FontWeight.w400,
+                fontWeight: FontWeight.w500,
                 color: secondaryColor,
                 decoration: TextDecoration.none,
               ),
@@ -453,7 +495,9 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final textColor = isDark ? AppTheme.kTextDark : AppTheme.kTextLight;
-    const secondaryColor = AppTheme.kSecondaryTextLight;
+    final secondaryColor = isDark
+        ? AppTheme.kSecondaryTextDark
+        : AppTheme.kSecondaryTextLight;
 
     return LiquidGlassCard(
       padding: const EdgeInsets.all(20),
@@ -464,18 +508,20 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
             '第$_currentDay天',
             style: TextStyle(
               fontSize: 24,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w800,
               letterSpacing: -0.3,
               color: textColor,
+              decoration: TextDecoration.none,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             '共 ${dayLessons.length} 节课',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w400,
+              fontWeight: FontWeight.w500,
               color: secondaryColor,
+              decoration: TextDecoration.none,
             ),
           ),
           const SizedBox(height: 16),
@@ -492,7 +538,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                       'L${dayLessons[i].number} · ${dayLessons[i].title}',
                       style: TextStyle(
                         fontSize: 15,
-                        fontWeight: FontWeight.w400,
+                        fontWeight: FontWeight.w500,
                         color: textColor,
                         decoration: TextDecoration.none,
                       ),
@@ -509,12 +555,13 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
   }
 
   Widget _lessonTag(Lesson l, bool isDark) {
-    final accent = isDark ? AppTheme.kIndigoLight : AppTheme.kIndigo;
     final isNew = l.isNew;
-    final bg = isNew
-        ? accent.withOpacity(0.12)
-        : AppTheme.kSecondaryTextLight.withOpacity(0.12);
-    final fg = isNew ? accent : AppTheme.kSecondaryTextLight;
+    final tagColor = isNew
+        ? AppTheme.kDuoGreen
+        : (isDark
+            ? AppTheme.kSecondaryTextDark
+            : AppTheme.kSecondaryTextLight);
+    final bg = tagColor.withOpacity(0.12);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -525,8 +572,9 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
         isNew ? '新课' : '复习',
         style: TextStyle(
           fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: fg,
+          fontWeight: FontWeight.w700,
+          color: tagColor,
+          decoration: TextDecoration.none,
         ),
       ),
     );
@@ -534,7 +582,11 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
 
   Widget _buildSentenceCard(bool isDark) {
     final textColor = isDark ? AppTheme.kTextDark : AppTheme.kTextLight;
-    const secondaryColor = AppTheme.kSecondaryTextLight;
+    final secondaryColor = isDark
+        ? AppTheme.kSecondaryTextDark
+        : AppTheme.kSecondaryTextLight;
+    final fieldBg =
+        isDark ? AppTheme.kBgSecondaryDark : AppTheme.kBgSecondaryLight;
     return LiquidGlassCard(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -544,17 +596,19 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
             '仿写句子',
             style: TextStyle(
               fontSize: 17,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               color: textColor,
+              decoration: TextDecoration.none,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             '仿写本课句型，巩固表达',
             style: TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w400,
+              fontWeight: FontWeight.w500,
               color: secondaryColor,
+              decoration: TextDecoration.none,
             ),
           ),
           const SizedBox(height: 12),
@@ -564,10 +618,8 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
             placeholder: '在此仿写本课句型句子…',
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: isDark
-                  ? const Color(0xFF2C2C2E)
-                  : const Color(0xFFF2F2F7),
-              borderRadius: BorderRadius.circular(14),
+              color: fieldBg,
+              borderRadius: BorderRadius.circular(16),
             ),
             onChanged: (_) => _debouncedSave(),
           ),
@@ -585,12 +637,14 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final accent = isDark ? AppTheme.kIndigoLight : AppTheme.kIndigo;
     final textColor = isDark ? AppTheme.kTextDark : AppTheme.kTextLight;
-    const secondaryColor = AppTheme.kSecondaryTextLight;
+    final secondaryColor = isDark
+        ? AppTheme.kSecondaryTextDark
+        : AppTheme.kSecondaryTextLight;
 
     final doneCount = states.where((e) => e).length;
     final allDone = doneCount == labels.length;
+    final countColor = allDone ? AppTheme.kDuoGreen : secondaryColor;
 
     return LiquidGlassCard(
       padding: const EdgeInsets.all(20),
@@ -599,14 +653,15 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
         children: [
           Row(
             children: [
-              Icon(icon, size: 22, color: accent),
+              Icon(icon, size: 22, color: AppTheme.kDuoGreen),
               const SizedBox(width: 10),
               Text(
                 title,
                 style: TextStyle(
                   fontSize: 17,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   color: textColor,
+                  decoration: TextDecoration.none,
                 ),
               ),
               const Spacer(),
@@ -614,8 +669,9 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                 '$doneCount/${labels.length}',
                 style: TextStyle(
                   fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: allDone ? AppTheme.kSuccess : secondaryColor,
+                  fontWeight: FontWeight.w800,
+                  color: countColor,
+                  decoration: TextDecoration.none,
                 ),
               ),
             ],

@@ -105,6 +105,12 @@ class _TextbookDropdownState extends State<TextbookDropdown> {
           decoration: BoxDecoration(
             color: cardBg,
             borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isDark
+                  ? AppTheme.kSeparatorDark
+                  : AppTheme.kSeparatorLight,
+              width: 1,
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(isDark ? 0.30 : 0.06),
@@ -127,7 +133,7 @@ class _TextbookDropdownState extends State<TextbookDropdown> {
                   currentLabel,
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                     color: textColor,
                     decoration: TextDecoration.none,
                   ),
@@ -136,7 +142,9 @@ class _TextbookDropdownState extends State<TextbookDropdown> {
               Icon(
                 CupertinoIcons.chevron_down,
                 size: 14,
-                color: AppTheme.kSecondaryTextLight,
+                color: isDark
+                    ? AppTheme.kSecondaryTextDark
+                    : AppTheme.kSecondaryTextLight,
               ),
             ],
           ),

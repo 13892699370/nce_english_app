@@ -217,7 +217,7 @@ class _BackdropNoise extends StatefulWidget {
 }
 
 class _BackdropNoiseState extends State<_BackdropNoise> {
-  Image? _image;
+  ui.Image? _image;
 
   @override
   void initState() {
@@ -253,7 +253,7 @@ class _BackdropNoiseState extends State<_BackdropNoise> {
 }
 
 class _BackdropNoisePainter extends CustomPainter {
-  final Image image;
+  final ui.Image image;
   _BackdropNoisePainter(this.image);
 
   @override

@@ -140,7 +140,7 @@ class _TextbookDropdownState extends State<TextbookDropdown> {
               offset: const Offset(0, 8),
             ),
           ];
-    const satMatrix = [
+    const satMatrix = <double>[
       1.3488, 0.147, 0.0342, 0, 0,
       0.0426, 1.171, 0.0364, 0, 0,
       0.0426, 0.147, 1.1714, 0, 0,

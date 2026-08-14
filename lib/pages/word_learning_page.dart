@@ -834,7 +834,6 @@ class _WordLearningPageState extends State<WordLearningPage> {
         child: ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(radius)),
           child: Stack(
-            mainAxisSize: MainAxisSize.min,
             children: [
               // 1) blur + sat 1.6
               Positioned.fill(

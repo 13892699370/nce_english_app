@@ -91,56 +91,56 @@ jobs:
 
           # 2. key.properties（相对 android/app/ 解析到仓库根 signing/）
           cat > android/key.properties <<'EOF'
-          storePassword=android
-          keyPassword=android
-          keyAlias=androiddebugkey
-          storeFile=../../signing/debug.keystore
-          EOF
+storePassword=android
+keyPassword=android
+keyAlias=androiddebugkey
+storeFile=../../signing/debug.keystore
+EOF
 
           # 3. 显式注入 release signingConfig + 让 release 使用它
           python3 - <<'PYEOF'
-          import pathlib
-          p = pathlib.Path('android/app/build.gradle')
-          s = p.read_text()
+import pathlib
+p = pathlib.Path('android/app/build.gradle')
+s = p.read_text()
 
-          # 注入 keystoreProperties 读取逻辑（仅在不存在时）
-          if 'keystoreProperties' not in s:
-              header = (
-                  "def keystoreProperties = new Properties()\n"
-                  "def keystorePropertiesFile = rootProject.file('key.properties')\n"
-                  "if (keystorePropertiesFile.exists()) {\n"
-                  "    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\n"
-                  "}\n\n"
-              )
-              s = header + s
+# 注入 keystoreProperties 读取逻辑（仅在不存在时）
+if 'keystoreProperties' not in s:
+    header = (
+        "def keystoreProperties = new Properties()\n"
+        "def keystorePropertiesFile = rootProject.file('key.properties')\n"
+        "if (keystorePropertiesFile.exists()) {\n"
+        "    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\n"
+        "}\n\n"
+    )
+    s = header + s
 
-          # 注入 signingConfigs.release 块（仅在不存在时）
-          injected_release = False
-          if 'signingConfigs {' not in s:
-              sc = (
-                  "    signingConfigs {\n"
-                  "        release {\n"
-                  "            keyAlias keystoreProperties['keyAlias']\n"
-                  "            keyPassword keystoreProperties['keyPassword']\n"
-                  "            storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null\n"
-                  "            storePassword keystoreProperties['storePassword']\n"
-                  "        }\n"
-                  "    }\n"
-              )
-              if '    buildTypes {' in s:
-                  s = s.replace('    buildTypes {', sc + '    buildTypes {', 1)
-                  injected_release = True
+# 注入 signingConfigs.release 块（仅在不存在时）
+injected_release = False
+if 'signingConfigs {' not in s:
+    sc = (
+        "    signingConfigs {\n"
+        "        release {\n"
+        "            keyAlias keystoreProperties['keyAlias']\n"
+        "            keyPassword keystoreProperties['keyPassword']\n"
+        "            storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null\n"
+        "            storePassword keystoreProperties['storePassword']\n"
+        "        }\n"
+        "    }\n"
+    )
+    if '    buildTypes {' in s:
+        s = s.replace('    buildTypes {', sc + '    buildTypes {', 1)
+        injected_release = True
 
-          # 仅在成功注入 release 配置时，才把 release 构建改用固定签名
-          # （否则保持 debug 签名，它也用 ~/.android/debug.keystore 固定 keystore）
-          if injected_release:
-              s = s.replace('signingConfig signingConfigs.debug',
-                            'signingConfig signingConfigs.release')
+# 仅在成功注入 release 配置时，才把 release 构建改用固定签名
+# （否则保持 debug 签名，它也用 ~/.android/debug.keystore 固定 keystore）
+if injected_release:
+    s = s.replace('signingConfig signingConfigs.debug',
+                  'signingConfig signingConfigs.release')
 
-          p.write_text(s)
-          print('=== Patched android/app/build.gradle signing config ===')
-          print('release signingConfig injected:', injected_release)
-          PYEOF
+p.write_text(s)
+print('=== Patched android/app/build.gradle signing config ===')
+print('release signingConfig injected:', injected_release)
+PYEOF
 
           echo "=== Keystore fingerprint (固定，每次编译一致) ==="
           keytool -list -v -keystore signing/debug.keystore -storepass android 2>/dev/null | grep SHA256
@@ -228,19 +228,19 @@ jobs:
           VERSION="${{ steps.bump.outputs.version }}"
 
           cat > release_notes.md <<EOF
-          # 新概念英语打卡 v${VERSION}
+# 新概念英语打卡 v${VERSION}
 
-          ## 安装说明
+## 安装说明
 
-          ### Android
-          下载 \`.apk\` 文件直接安装。
+### Android
+下载 \`.apk\` 文件直接安装。
 
-          ### iOS
-          下载 \`.ipa\` 文件，需使用 [Sideloadly](https://sideloadly.io/)、[AltStore](https://altstore.io/) 或 TrollStore 等工具自签后安装。
+### iOS
+下载 \`.ipa\` 文件，需使用 [Sideloadly](https://sideloadly.io/)、[AltStore](https://altstore.io/) 或 TrollStore 等工具自签后安装。
 
-          ## 更新日志
-          ${COMMITS}
-          EOF
+## 更新日志
+${COMMITS}
+EOF
 
           cat release_notes.md
           echo "notes<<EOF" >> "$GITHUB_OUTPUT"

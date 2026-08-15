@@ -1,5 +1,12 @@
 # 更新日志
 
+## v1.4.4 — 修复 Android 构建
+
+- **修复 Android 构建失败**：`android/app/build.gradle` 此前为缺少 Flutter 插件声明的简化版，导致 CI "Build Android APK" 步骤失败
+  - 改用完整的新版 Flutter `plugins {}` 块写法（`dev.flutter.flutter-gradle-plugin`），匹配 `flutter create .` 生成的 `settings.gradle`
+  - 内置 release 签名配置，指向固定 debug keystore（带 `keystoreProperties` 兜底默认值）
+  - 加入 `localProperties` 版本号加载、`compileOptions`、`namespace` 等标准配置
+
 ## v1.4.3 — 签名固定 + 背景精装
 
 - **修复 Android 签名不一致**：每次 CI 编译生成的 APK 签名不同，导致无法覆盖安装、必须先卸载

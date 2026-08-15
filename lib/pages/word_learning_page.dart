@@ -213,10 +213,9 @@ class _WordLearningPageState extends State<WordLearningPage> {
     final textColor = isDark ? AppTheme.kTextDark : AppTheme.kTextLight;
     final secondaryColor =
         isDark ? AppTheme.kSecondaryTextDark : AppTheme.kSecondaryTextLight;
-    final bgColor = isDark ? AppTheme.kBgDark : AppTheme.kBgLight;
 
     return CupertinoPageScaffold(
-      backgroundColor: bgColor,
+      backgroundColor: Colors.transparent,
       navigationBar: CupertinoNavigationBar(
         backgroundColor: Colors.transparent,
         border: Border.all(color: Colors.transparent),
@@ -336,21 +335,27 @@ class _WordLearningPageState extends State<WordLearningPage> {
     );
   }
 
-  // —— 生词本 chip（绿色 tint + 书本图标）——
+  // —— 生词本 chip（绿色 tint + 书本图标 + 3D 底边）——
   Widget _buildNotebookChip(bool isDark) {
     const accent = AppTheme.kDuoGreen;
     return GestureDetector(
       onTap: () => _showNotebook(context),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: accent.withOpacity(0.12),
           borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.kDuoGreenDark,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(CupertinoIcons.book, size: 15, color: accent),
+            const Icon(CupertinoIcons.book, size: 16, color: accent),
             const SizedBox(width: 6),
             Text(
               '生词本 $_notebookCount',
@@ -409,31 +414,45 @@ class _WordLearningPageState extends State<WordLearningPage> {
     final secondaryColor =
         isDark ? AppTheme.kSecondaryTextDark : AppTheme.kSecondaryTextLight;
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor, width: 1),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              color: valueColor,
-              decoration: TextDecoration.none,
-            ),
+          Container(
+            height: 3,
+            width: double.infinity,
+            color: valueColor,
           ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: secondaryColor,
-              decoration: TextDecoration.none,
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: valueColor,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: secondaryColor,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -485,10 +504,16 @@ class _WordLearningPageState extends State<WordLearningPage> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           curve: Curves.easeOut,
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 11),
           decoration: BoxDecoration(
             color: selected ? AppTheme.kDuoGreen : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
+            boxShadow: [
+              BoxShadow(
+                color: selected ? AppTheme.kDuoGreenDark : Colors.transparent,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           alignment: Alignment.center,
           child: Text(
@@ -547,10 +572,10 @@ class _WordLearningPageState extends State<WordLearningPage> {
                               children: List.generate(
                                 5,
                                 (i) => Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
                                   child: Icon(
                                     CupertinoIcons.star_fill,
-                                    size: 18,
+                                    size: 22,
                                     color: i < familiarity
                                         ? AppTheme.kDuoYellow
                                         : separatorColor,
@@ -564,7 +589,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
                               word.word,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontSize: 36,
+                                fontSize: 40,
                                 fontWeight: FontWeight.w800,
                                 color: textColor,
                                 letterSpacing: 0.5,
@@ -672,10 +697,10 @@ class _WordLearningPageState extends State<WordLearningPage> {
               const SizedBox(width: 12),
               Expanded(
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
                     value: (_index + 1) / _vocab.length,
-                    minHeight: 8,
+                    minHeight: 12,
                     backgroundColor: separatorColor,
                     valueColor:
                         const AlwaysStoppedAnimation(AppTheme.kDuoGreen),
@@ -695,7 +720,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
                 child: DuolingoButton(
                   label: '不认识',
                   variant: DuolingoButtonVariant.danger,
-                  minHeight: 56,
+                  minHeight: 58,
                   borderRadius: 16,
                   onPressed: _revealed ? () => _answer(false) : null,
                 ),
@@ -705,7 +730,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
                 child: DuolingoButton(
                   label: '认识',
                   variant: DuolingoButtonVariant.success,
-                  minHeight: 56,
+                  minHeight: 58,
                   borderRadius: 16,
                   onPressed: _revealed ? () => _answer(true) : null,
                 ),
@@ -717,24 +742,27 @@ class _WordLearningPageState extends State<WordLearningPage> {
     );
   }
 
-  // —— 课程号徽标（灰底圆角）——
+  // —— 课程号徽标（圆形 kDuoBlue tint）——
   Widget _lessonBadge(VocabWord word, bool isDark) {
-    final bg = isDark ? AppTheme.kSeparatorDark : AppTheme.kSeparatorLight;
-    final textColor =
-        isDark ? AppTheme.kSecondaryTextDark : AppTheme.kSecondaryTextLight;
+    const badgeColor = AppTheme.kDuoBlue;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      width: 32,
+      height: 32,
+      alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(8),
+        color: badgeColor.withOpacity(0.12),
+        shape: BoxShape.circle,
       ),
-      child: Text(
-        'L${word.lessonNumber}',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: textColor,
-          decoration: TextDecoration.none,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          'L${word.lessonNumber}',
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: badgeColor,
+            decoration: TextDecoration.none,
+          ),
         ),
       ),
     );
@@ -748,33 +776,25 @@ class _WordLearningPageState extends State<WordLearningPage> {
   }) {
     const accentColor = AppTheme.kDuoGreen;
     final cardColor = isDark ? AppTheme.kCardDark : AppTheme.kCardLight;
-    final borderColor =
-        isDark ? AppTheme.kSeparatorDark : AppTheme.kSeparatorLight;
-    final secondaryColor =
-        isDark ? AppTheme.kSecondaryTextDark : AppTheme.kSecondaryTextLight;
     final selected = WordTtsService.instance.defaultAccent == accent;
+    final fgColor = selected ? Colors.white : accentColor;
     return GestureDetector(
       onTap: () => _speakWord(accent),
       behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? accentColor.withOpacity(0.12) : cardColor,
+          color: selected ? accentColor : cardColor,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? accentColor.withOpacity(0.3) : borderColor,
-            width: 1,
-          ),
+          border: selected ? null : Border.all(color: accentColor, width: 2),
           boxShadow: selected
-              ? null
-              : [
+              ? [
                   BoxShadow(
-                    color: Colors.black.withOpacity(isDark ? 0.22 : 0.05),
-                    blurRadius: 8,
-                    spreadRadius: -2,
-                    offset: const Offset(0, 2),
+                    color: AppTheme.kDuoGreenDark,
+                    offset: const Offset(0, 3),
                   ),
-                ],
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -782,7 +802,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
             Icon(
               CupertinoIcons.speaker_2_fill,
               size: 15,
-              color: selected ? accentColor : secondaryColor,
+              color: fgColor,
             ),
             const SizedBox(width: 7),
             Text(
@@ -790,7 +810,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: selected ? accentColor : secondaryColor,
+                color: fgColor,
                 decoration: TextDecoration.none,
               ),
             ),
@@ -816,7 +836,7 @@ class _WordLearningPageState extends State<WordLearningPage> {
             children: [
               const Icon(
                 CupertinoIcons.checkmark_seal_fill,
-                size: 56,
+                size: 72,
                 color: AppTheme.kDuoGreen,
               ),
               const SizedBox(height: 12),
@@ -835,6 +855,16 @@ class _WordLearningPageState extends State<WordLearningPage> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 15,
+                  fontWeight: FontWeight.w400,
+                  color: secondaryColor,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '继续保持！',
+                style: TextStyle(
+                  fontSize: 14,
                   fontWeight: FontWeight.w400,
                   color: secondaryColor,
                   decoration: TextDecoration.none,
@@ -867,16 +897,26 @@ class _WordLearningPageState extends State<WordLearningPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               CupertinoIcons.tray,
-              size: 48,
-              color: secondaryColor.withOpacity(0.4),
+              size: 64,
+              color: AppTheme.kDuoBlue,
             ),
             const SizedBox(height: 16),
             Text(
               _showDayFilter ? '第$_currentDay天暂无单词数据' : '暂无单词数据',
               style: TextStyle(
                 fontSize: 15,
+                fontWeight: FontWeight.w400,
+                color: secondaryColor,
+                decoration: TextDecoration.none,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '切换到全部词库试试',
+              style: TextStyle(
+                fontSize: 13,
                 fontWeight: FontWeight.w400,
                 color: secondaryColor,
                 decoration: TextDecoration.none,

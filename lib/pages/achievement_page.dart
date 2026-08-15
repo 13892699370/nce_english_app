@@ -38,6 +38,7 @@ class _AchievementPageState extends State<AchievementPage> {
     };
 
     return CupertinoPageScaffold(
+      backgroundColor: Colors.transparent,
       navigationBar: CupertinoNavigationBar(
         backgroundColor: Colors.transparent,
         border: null,
@@ -48,18 +49,33 @@ class _AchievementPageState extends State<AchievementPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
           children: [
-            // 1. 大标题
+            // 1. 大标题 + 副标题
             Padding(
               padding: const EdgeInsets.only(top: 16, bottom: 20),
-              child: Text(
-                '成就',
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                  color: textColor,
-                  decoration: TextDecoration.none,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '成就',
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                      color: textColor,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '已解锁 ${unlockedMap.length} / ${kAchievements.length} 个徽章',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: secondaryColor,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ],
               ),
             ),
 
@@ -83,9 +99,9 @@ class _AchievementPageState extends State<AchievementPage> {
                           ),
                         ),
                         Container(
-                          width: 0.5,
+                          width: 1,
                           color: separatorColor,
-                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          margin: const EdgeInsets.symmetric(vertical: 8),
                         ),
                         Expanded(
                           child: _statCell(
@@ -101,10 +117,10 @@ class _AchievementPageState extends State<AchievementPage> {
                     ),
                   ),
                   Container(
-                    height: 0.5,
+                    height: 1,
                     color: separatorColor,
                     margin: const EdgeInsets.symmetric(
-                        vertical: 4, horizontal: 8),
+                        vertical: 10, horizontal: 12),
                   ),
                   IntrinsicHeight(
                     child: Row(
@@ -120,9 +136,9 @@ class _AchievementPageState extends State<AchievementPage> {
                           ),
                         ),
                         Container(
-                          width: 0.5,
+                          width: 1,
                           color: separatorColor,
-                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          margin: const EdgeInsets.symmetric(vertical: 8),
                         ),
                         Expanded(
                           child: _statCell(
@@ -143,12 +159,12 @@ class _AchievementPageState extends State<AchievementPage> {
 
             // 3. 我的徽章 小标题
             Padding(
-              padding: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.only(bottom: 18),
               child: Text(
                 '我的徽章',
                 style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
                   color: textColor,
                   decoration: TextDecoration.none,
                 ),
@@ -160,7 +176,7 @@ class _AchievementPageState extends State<AchievementPage> {
               final index = entry.key;
               final def = entry.value;
               return Padding(
-                padding: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.only(bottom: 16),
                 child: _buildAchievementCard(
                   index: index,
                   isDark: isDark,
@@ -179,7 +195,7 @@ class _AchievementPageState extends State<AchievementPage> {
     );
   }
 
-  /// 统计单元：图标(24) + 数字(36 w800) + 标签(13 w600 secondary)，居中
+  /// 统计单元：图标(24)放在 44x44 彩色圆形背景里 + 数字(36 w800) + 标签(13 w600 secondary)，居中
   Widget _statCell({
     required IconData icon,
     required Color iconColor,
@@ -188,32 +204,44 @@ class _AchievementPageState extends State<AchievementPage> {
     required String label,
     required Color secondaryColor,
   }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: iconColor, size: 24),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 36,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -1.0,
-            color: valueColor,
-            decoration: TextDecoration.none,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: iconColor.withOpacity(0.15),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: iconColor, size: 24),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: secondaryColor,
-            decoration: TextDecoration.none,
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -1.0,
+              color: valueColor,
+              decoration: TextDecoration.none,
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: secondaryColor,
+              decoration: TextDecoration.none,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -234,14 +262,14 @@ class _AchievementPageState extends State<AchievementPage> {
         isDark ? AppTheme.kSeparatorDark : AppTheme.kSeparatorLight;
 
     return LiquidGlassCard(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 左侧 64x64 圆形徽章
+          // 左侧 72x72 圆形徽章
           Container(
-            width: 64,
-            height: 64,
+            width: 72,
+            height: 72,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: unlocked
@@ -252,12 +280,15 @@ class _AchievementPageState extends State<AchievementPage> {
                     )
                   : null,
               color: unlocked ? null : grayCircle,
+              border: unlocked
+                  ? Border.all(color: Colors.white, width: 2)
+                  : Border.all(color: separatorColor, width: 1),
               boxShadow: unlocked
                   ? [
                       BoxShadow(
-                        color: palette.glow.withOpacity(0.3),
-                        blurRadius: 14,
-                        spreadRadius: 2,
+                        color: palette.glow.withOpacity(0.35),
+                        blurRadius: 18,
+                        spreadRadius: 3,
                         offset: const Offset(0, 4),
                       ),
                     ]
@@ -268,7 +299,7 @@ class _AchievementPageState extends State<AchievementPage> {
               opacity: unlocked ? 1.0 : 0.3,
               child: Text(
                 def.emoji,
-                style: const TextStyle(fontSize: 36),
+                style: const TextStyle(fontSize: 40),
               ),
             ),
           ),
@@ -297,10 +328,10 @@ class _AchievementPageState extends State<AchievementPage> {
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppTheme.kDuoGreen.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Text(
                           '已解锁',
@@ -376,10 +407,10 @@ class _AchievementPageState extends State<AchievementPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ClipRRect(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(5),
           child: LinearProgressIndicator(
             value: ratio,
-            minHeight: 8,
+            minHeight: 10,
             backgroundColor: separatorColor,
             valueColor: AlwaysStoppedAnimation<Color>(accent),
           ),
@@ -388,8 +419,8 @@ class _AchievementPageState extends State<AchievementPage> {
         Text(
           '$current / $target',
           style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
             color: secondaryColor.withOpacity(0.7),
             decoration: TextDecoration.none,
           ),

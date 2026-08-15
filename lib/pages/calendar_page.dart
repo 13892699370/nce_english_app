@@ -82,6 +82,7 @@ class _CalendarPageState extends State<CalendarPage> {
     final today = DateUtil.today();
 
     return CupertinoPageScaffold(
+      backgroundColor: Colors.transparent,
       navigationBar: const CupertinoNavigationBar(
         backgroundColor: Colors.transparent,
         border: null,
@@ -92,18 +93,32 @@ class _CalendarPageState extends State<CalendarPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
           children: [
-            // 1. 大标题
+            // 1. 大标题 + 副标题
             Padding(
               padding: const EdgeInsets.only(top: 10, bottom: 16),
-              child: Text(
-                '学习日历',
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                  color: textColor,
-                  decoration: TextDecoration.none,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '学习日历',
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                      color: textColor,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '查看你的打卡记录',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: secondaryColor,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ],
               ),
             ),
 
@@ -163,20 +178,33 @@ class _CalendarPageState extends State<CalendarPage> {
             GestureDetector(
               onTap: _prevMonth,
               behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Icon(
-                  CupertinoIcons.chevron_left,
-                  size: 22,
-                  color: AppTheme.kDuoGreen,
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: Center(
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppTheme.kDuoGreen.withOpacity(0.12),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        CupertinoIcons.chevron_left,
+                        size: 22,
+                        color: AppTheme.kDuoGreen,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
             Text(
               monthLabel,
               style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
                 color: textColor,
                 decoration: TextDecoration.none,
               ),
@@ -184,12 +212,25 @@ class _CalendarPageState extends State<CalendarPage> {
             GestureDetector(
               onTap: _nextMonth,
               behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Icon(
-                  CupertinoIcons.chevron_right,
-                  size: 22,
-                  color: AppTheme.kDuoGreen,
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: Center(
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppTheme.kDuoGreen.withOpacity(0.12),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        CupertinoIcons.chevron_right,
+                        size: 22,
+                        color: AppTheme.kDuoGreen,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -204,8 +245,8 @@ class _CalendarPageState extends State<CalendarPage> {
                       child: Text(
                         w,
                         style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
                           color: secondaryColor,
                           decoration: TextDecoration.none,
                         ),
@@ -221,8 +262,8 @@ class _CalendarPageState extends State<CalendarPage> {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 7,
-            mainAxisSpacing: 6,
-            crossAxisSpacing: 6,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
             childAspectRatio: 1,
           ),
           itemCount: firstWeekday + daysInMonth,
@@ -267,10 +308,10 @@ class _CalendarPageState extends State<CalendarPage> {
   }) {
     final String dayText = '$day';
     final TextStyle dayStyle = TextStyle(
-      fontSize: 15,
-      fontWeight: isToday || allDone || partial
-          ? FontWeight.w700
-          : FontWeight.w400,
+      fontSize: (allDone || partial) ? 16 : 15,
+      fontWeight: (allDone || partial)
+          ? FontWeight.w800
+          : (isToday ? FontWeight.w700 : FontWeight.w400),
       decoration: TextDecoration.none,
     );
 
@@ -289,8 +330,8 @@ class _CalendarPageState extends State<CalendarPage> {
               style: dayStyle.copyWith(color: Colors.white),
             ),
             Container(
-              width: 4,
-              height: 4,
+              width: 5,
+              height: 5,
               margin: const EdgeInsets.only(top: 2),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
@@ -317,8 +358,8 @@ class _CalendarPageState extends State<CalendarPage> {
               style: dayStyle.copyWith(color: Colors.white),
             ),
             Container(
-              width: 4,
-              height: 4,
+              width: 5,
+              height: 5,
               margin: const EdgeInsets.only(top: 2),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
@@ -335,7 +376,7 @@ class _CalendarPageState extends State<CalendarPage> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: AppTheme.kDuoGreen.withOpacity(0.12),
-          border: Border.all(color: AppTheme.kDuoGreen, width: 1.5),
+          border: Border.all(color: AppTheme.kDuoGreen, width: 2),
         ),
         alignment: Alignment.center,
         child: Text(
@@ -359,10 +400,20 @@ class _CalendarPageState extends State<CalendarPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _legendDot(AppTheme.kDuoGreen, '已全部完成', secondaryColor),
-        const SizedBox(width: 20),
-        _legendDot(AppTheme.kDuoOrange, '部分完成', secondaryColor),
-        const SizedBox(width: 20),
+        _legendDot(
+          AppTheme.kDuoGreen,
+          '已全部完成',
+          secondaryColor,
+          shadowColor: AppTheme.kDuoGreenDark,
+        ),
+        const SizedBox(width: 24),
+        _legendDot(
+          AppTheme.kDuoOrange,
+          '部分完成',
+          secondaryColor,
+          shadowColor: AppTheme.kDuoOrangeDark,
+        ),
+        const SizedBox(width: 24),
         _legendDot(AppTheme.kDuoGreen, '今天', secondaryColor, isRing: true),
       ],
     );
@@ -373,24 +424,34 @@ class _CalendarPageState extends State<CalendarPage> {
     String label,
     Color secondaryColor, {
     bool isRing = false,
+    Color? shadowColor,
   }) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 12,
-          height: 12,
+          width: 14,
+          height: 14,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: isRing ? color.withOpacity(0.12) : color,
             border: isRing ? Border.all(color: color, width: 1.5) : null,
+            boxShadow: (!isRing && shadowColor != null)
+                ? [
+                    BoxShadow(
+                      color: shadowColor,
+                      offset: const Offset(0, 2),
+                      blurRadius: 0,
+                    ),
+                  ]
+                : null,
           ),
         ),
         const SizedBox(width: 6),
         Text(
           label,
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
             color: secondaryColor,
             decoration: TextDecoration.none,
@@ -412,7 +473,7 @@ class _CalendarPageState extends State<CalendarPage> {
     final partial = total - allDone;
 
     return LiquidGlassCard(
-      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 12),
       child: Row(
         children: [
           Expanded(
@@ -425,7 +486,7 @@ class _CalendarPageState extends State<CalendarPage> {
           ),
           Container(
             width: 1,
-            height: 44,
+            height: 48,
             color: separator,
           ),
           Expanded(
@@ -439,7 +500,7 @@ class _CalendarPageState extends State<CalendarPage> {
           ),
           Container(
             width: 1,
-            height: 44,
+            height: 48,
             color: separator,
           ),
           Expanded(
@@ -469,7 +530,7 @@ class _CalendarPageState extends State<CalendarPage> {
         Text(
           value,
           style: TextStyle(
-            fontSize: 28,
+            fontSize: 32,
             fontWeight: FontWeight.w800,
             color: valueColor ?? textColor,
             decoration: TextDecoration.none,
@@ -480,7 +541,7 @@ class _CalendarPageState extends State<CalendarPage> {
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
             color: secondaryColor,
             decoration: TextDecoration.none,
@@ -553,17 +614,17 @@ class _CalendarPageState extends State<CalendarPage> {
               child: Row(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 52,
+                    height: 52,
                     decoration: BoxDecoration(
                       color: AppTheme.kDuoGreen.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       '${checkin.dayNumber}',
                       style: TextStyle(
-                        fontSize: 17,
+                        fontSize: 20,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.kDuoGreen,
                         decoration: TextDecoration.none,
@@ -597,11 +658,11 @@ class _CalendarPageState extends State<CalendarPage> {
                     ),
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: completionColor.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       '${checkin.doneCount}/${checkin.totalTaskCount}',
@@ -639,12 +700,12 @@ class _CalendarPageState extends State<CalendarPage> {
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
+                                    horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: l.isNew
                                       ? AppTheme.kDuoGreen.withOpacity(0.12)
                                       : AppTheme.kDuoOrange.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(6),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   'L${l.number} · ${l.isNew ? "新课" : "复习"}',

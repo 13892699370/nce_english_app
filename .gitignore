@@ -17,6 +17,8 @@ android/app/profile
 android/app/release
 *.jks
 *.keystore
+# signing/debug.keystore 是 CI 运行时从 debug.keystore.b64 解码生成的二进制，不入库
+# 仓库只存文本 debug.keystore.b64，CI 解码后使用，保证每次签名一致
 
 # iOS / Xcode
 ios/Flutter/.last_build_id

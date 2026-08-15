@@ -35,12 +35,21 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return ColoredBox(
-      color: isDark ? AppTheme.kBgDark : AppTheme.kBgLight,
+    // 微妙纵向渐变背景：去除"毛坯房"纯色平铺感，增加纵深感
+    // 浅色：白 → 极淡灰青；深色：深青 → 更深，顶部略亮
+    final gradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: isDark
+          ? [const Color(0xFF16222A), const Color(0xFF0E161B)]
+          : [Colors.white, const Color(0xFFF4F6F8)],
+    );
+    return DecoratedBox(
+      decoration: BoxDecoration(gradient: gradient),
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // 页面内容（各页面自带 CupertinoPageScaffold）
+          // 页面内容（各页面自带 CupertinoPageScaffold，背景透明以透出渐变）
           Positioned.fill(
             child: IndexedStack(index: _index, children: _pages),
           ),
@@ -165,24 +174,55 @@ class _DuoNavItem extends StatelessWidget {
           ),
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Icon(
-            item.icon,
-            size: 22,
-            color: selected ? activeFg : muted,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                item.icon,
+                size: 22,
+                color: selected ? activeFg : muted,
+              ),
+              const SizedBox(width: 7),
+              Text(
+                item.label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: selected ? activeFg : muted,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 7),
-          Text(
-            item.label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              color: selected ? activeFg : muted,
-              decoration: TextDecoration.none,
+          // 选中态顶部高光：与 3D 按钮一致的"光面"质感
+          if (selected)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: Container(
+                  height: 18,
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(999),
+                      topRight: Radius.circular(999),
+                    ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.white.withOpacity(0.22),
+                        Colors.white.withOpacity(0.0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
         ],
       ),
     );

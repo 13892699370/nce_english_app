@@ -74,6 +74,77 @@ jobs:
       - name: Pull deps
         run: flutter pub get
 
+      # ---- 注入固定 debug.keystore（保证每次编译签名一致，可覆盖安装）----
+      # GitHub Actions runner 每次都是全新环境，默认 keystore 每次不同 → 签名不一致 → 无法覆盖安装
+      # 三重保险保证签名指纹恒定：
+      #   1. 复制到 ~/.android/debug.keystore（默认 debug 签名约定位置）
+      #   2. 写 android/key.properties 指向仓库内固定 keystore
+      #   3. 显式注入 release signingConfig 到 build.gradle，release 构建强制使用固定 keystore
+      - name: Setup fixed debug keystore
+        run: |
+          # 0. 从 base64 文本还原 keystore 二进制（仓库只存 .b64 文本，避免二进制入库）
+          python3 -c "import base64,pathlib; pathlib.Path('signing/debug.keystore').write_bytes(base64.b64decode(pathlib.Path('signing/debug.keystore.b64').read_text()))"
+
+          # 1. 默认约定位置
+          mkdir -p ~/.android
+          cp signing/debug.keystore ~/.android/debug.keystore
+
+          # 2. key.properties（相对 android/app/ 解析到仓库根 signing/）
+          cat > android/key.properties <<'EOF'
+          storePassword=android
+          keyPassword=android
+          keyAlias=androiddebugkey
+          storeFile=../../signing/debug.keystore
+          EOF
+
+          # 3. 显式注入 release signingConfig + 让 release 使用它
+          python3 - <<'PYEOF'
+          import pathlib
+          p = pathlib.Path('android/app/build.gradle')
+          s = p.read_text()
+
+          # 注入 keystoreProperties 读取逻辑（仅在不存在时）
+          if 'keystoreProperties' not in s:
+              header = (
+                  "def keystoreProperties = new Properties()\n"
+                  "def keystorePropertiesFile = rootProject.file('key.properties')\n"
+                  "if (keystorePropertiesFile.exists()) {\n"
+                  "    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\n"
+                  "}\n\n"
+              )
+              s = header + s
+
+          # 注入 signingConfigs.release 块（仅在不存在时）
+          injected_release = False
+          if 'signingConfigs {' not in s:
+              sc = (
+                  "    signingConfigs {\n"
+                  "        release {\n"
+                  "            keyAlias keystoreProperties['keyAlias']\n"
+                  "            keyPassword keystoreProperties['keyPassword']\n"
+                  "            storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null\n"
+                  "            storePassword keystoreProperties['storePassword']\n"
+                  "        }\n"
+                  "    }\n"
+              )
+              if '    buildTypes {' in s:
+                  s = s.replace('    buildTypes {', sc + '    buildTypes {', 1)
+                  injected_release = True
+
+          # 仅在成功注入 release 配置时，才把 release 构建改用固定签名
+          # （否则保持 debug 签名，它也用 ~/.android/debug.keystore 固定 keystore）
+          if injected_release:
+              s = s.replace('signingConfig signingConfigs.debug',
+                            'signingConfig signingConfigs.release')
+
+          p.write_text(s)
+          print('=== Patched android/app/build.gradle signing config ===')
+          print('release signingConfig injected:', injected_release)
+          PYEOF
+
+          echo "=== Keystore fingerprint (固定，每次编译一致) ==="
+          keytool -list -v -keystore signing/debug.keystore -storepass android 2>/dev/null | grep SHA256
+
       # ---------------- iOS 未签名 IPA ----------------
       - name: Build & package unsigned iOS app
         run: |

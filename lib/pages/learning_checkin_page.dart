@@ -262,7 +262,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
         isDark ? AppTheme.kSecondaryTextDark : AppTheme.kSecondaryTextLight;
 
     return CupertinoPageScaffold(
-      backgroundColor: isDark ? AppTheme.kBgDark : AppTheme.kBgLight,
+      backgroundColor: Colors.transparent,
       navigationBar: CupertinoNavigationBar(
         backgroundColor: Colors.transparent,
         border: null,
@@ -274,7 +274,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
           children: [
             // 1. 大标题 + 副标题
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Column(
@@ -306,7 +306,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
             ),
             // 2. 教材下拉
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
               child: TextbookDropdown(
                 options: textbooks,
                 value: TextbookService.instance.currentId,
@@ -320,7 +320,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 itemCount: totalDays,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
                 itemBuilder: (_, i) {
                   final day = i + 1;
                   final selected = day == _currentDay;
@@ -354,7 +354,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
                                 color: isDark
                                     ? AppTheme.kSeparatorDark
                                     : AppTheme.kSeparatorLight,
-                                width: 1,
+                                width: 1.5,
                               ),
                         boxShadow: selected
                             ? null
@@ -441,6 +441,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
           labels: kPreviewTaskLabels,
           states: _preview,
           section: 0,
+          color: AppTheme.kDuoBlue,
         ),
         const SizedBox(height: 14),
         _buildSection(
@@ -449,6 +450,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
           labels: kFormalTaskLabels,
           states: _formal,
           section: 1,
+          color: AppTheme.kDuoGreen,
         ),
         const SizedBox(height: 14),
         _buildSection(
@@ -457,6 +459,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
           labels: kReviewTaskLabels,
           states: _review,
           section: 2,
+          color: AppTheme.kDuoOrange,
         ),
 
         // 6. 仿写句子
@@ -465,9 +468,25 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
 
         // 7. 完成今日打卡
         const SizedBox(height: 22),
+        Center(
+          child: Opacity(
+            opacity: 0.7,
+            child: Text(
+              '完成所有任务后自动跳转下一天',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: secondaryColor,
+                decoration: TextDecoration.none,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
         DuolingoButton(
           label: '完成今日打卡',
           variant: DuolingoButtonVariant.primary,
+          minHeight: 56,
           onPressed: _immediateSave,
         ),
 
@@ -476,14 +495,30 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
         Center(
           child: Opacity(
             opacity: 0.6,
-            child: Text(
-              _isSaving ? '保存中…' : '已自动保存',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: secondaryColor,
-                decoration: TextDecoration.none,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: _isSaving
+                        ? AppTheme.kDuoOrange
+                        : AppTheme.kDuoGreen,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _isSaving ? '保存中…' : '已自动保存',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: secondaryColor,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -501,54 +536,88 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
 
     return LiquidGlassCard(
       padding: const EdgeInsets.all(20),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '第$_currentDay天',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.3,
-              color: textColor,
-              decoration: TextDecoration.none,
+          // 左侧：64×64 大号天数方块（视觉焦点）
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppTheme.kDuoGreen.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            alignment: Alignment.center,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  '$_currentDay',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.kDuoGreen,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Text(
+                  '天',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: secondaryColor,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            '共 ${dayLessons.length} 节课',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: secondaryColor,
-              decoration: TextDecoration.none,
-            ),
-          ),
-          const SizedBox(height: 16),
-          for (int i = 0; i < dayLessons.length; i++)
-            Padding(
-              padding: EdgeInsets.only(
-                  bottom: i == dayLessons.length - 1 ? 0 : 10),
-              child: Row(
-                children: [
-                  _lessonTag(dayLessons[i], isDark),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'L${dayLessons[i].number} · ${dayLessons[i].title}',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        color: textColor,
-                        decoration: TextDecoration.none,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+          const SizedBox(width: 16),
+          // 右侧：共X节课 + 课程列表
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '共 ${dayLessons.length} 节课',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: secondaryColor,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                for (int i = 0; i < dayLessons.length; i++)
+                  Padding(
+                    padding: EdgeInsets.only(
+                        bottom: i == dayLessons.length - 1 ? 0 : 10),
+                    child: Row(
+                      children: [
+                        _lessonTag(dayLessons[i], isDark),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'L${dayLessons[i].number} · ${dayLessons[i].title}',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: textColor,
+                              decoration: TextDecoration.none,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
+          ),
         ],
       ),
     );
@@ -563,10 +632,10 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
             : AppTheme.kSecondaryTextLight);
     final bg = tagColor.withOpacity(0.12);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
         isNew ? '新课' : '复习',
@@ -612,16 +681,27 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
             ),
           ),
           const SizedBox(height: 12),
-          CupertinoTextField(
-            controller: _imitationCtrl,
-            maxLines: 3,
-            placeholder: '在此仿写本课句型句子…',
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: fieldBg,
-              borderRadius: BorderRadius.circular(16),
+          SizedBox(
+            height: 100,
+            child: CupertinoTextField(
+              controller: _imitationCtrl,
+              maxLines: null,
+              minLines: null,
+              expands: true,
+              placeholder: '在此仿写本课句型句子…',
+              padding: const EdgeInsets.all(14),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: textColor,
+                decoration: TextDecoration.none,
+              ),
+              decoration: BoxDecoration(
+                color: fieldBg,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              onChanged: (_) => _debouncedSave(),
             ),
-            onChanged: (_) => _debouncedSave(),
           ),
         ],
       ),
@@ -634,6 +714,7 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
     required List<String> labels,
     required List<bool> states,
     required int section,
+    required Color color,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -653,8 +734,17 @@ class _LearningCheckinPageState extends State<LearningCheckinPage> {
         children: [
           Row(
             children: [
-              Icon(icon, size: 22, color: AppTheme.kDuoGreen),
-              const SizedBox(width: 10),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Icon(icon, size: 20, color: color),
+              ),
+              const SizedBox(width: 12),
               Text(
                 title,
                 style: TextStyle(
